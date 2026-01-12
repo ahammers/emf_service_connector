@@ -32,7 +32,21 @@ SUBMIT_PATH = "/api/submit_energy_data"
 
 SEND_EVERY_MINUTES = 5
 
-# Erwartete API-Einheiten/Feldtypen laut Doku. :contentReference[oaicite:1]{index=1}
+PLATFORMS = ["sensor"]
+
+# Dispatcher signal
+SIGNAL_STATUS_UPDATED = "emf_service_connector_status_updated"
+
+# Events
+EVENT_PAYLOAD = "emf_service_connector_payload"
+EVENT_RESULT = "emf_service_connector_result"
+EVENT_STATUS = "emf_service_connector_status"
+
+# Services
+SERVICE_SEND_NOW = "send_now"
+SERVICE_GET_STATUS = "get_status"
+
+# Erwartete API-Einheiten/Feldtypen
 FIELD_SPECS: dict[str, dict[str, str]] = {
     # power (W, integer)
     "em_power_grid": {"unit": "W", "type": "int"},

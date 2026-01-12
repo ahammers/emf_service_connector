@@ -1,6 +1,7 @@
 {
   "name": "EMF Service Connector",
   "domains": ["emf_service_connector"],
+  "iot_class": "cloud_push",
   "render_readme": true,
   "content_in_root": true,
   "zip_release": false

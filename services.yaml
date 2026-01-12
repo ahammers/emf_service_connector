@@ -1,1 +1,17 @@
-# (optional) – aktuell keine Services nötig
+send_now:
+  name: Send now
+  description: Immediately submit energy data (useful for testing).
+  fields:
+    entry_id:
+      name: Entry ID
+      description: Optional config entry id. If omitted, all EMF Service Connector entries are triggered.
+      example: "abc123def456..."
+
+get_status:
+  name: Get status
+  description: Emits an event with the last status information (payload masked).
+  fields:
+    entry_id:
+      name: Entry ID
+      description: Optional config entry id. If omitted, emits status for all entries.
+      example: "abc123def456..."

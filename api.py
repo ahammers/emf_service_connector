@@ -13,7 +13,7 @@ class EmfApi:
     session: ClientSession
     base_url: str
 
-    async def submit_energy_data(self, payload: dict[str, Any]) -> None:
+    async def submit_energy_data(self, payload: dict[str, Any]) -> tuple[int, str]:
         url = f"{self.base_url.rstrip('/')}{SUBMIT_PATH}"
         timeout = ClientTimeout(total=20)
 
@@ -23,7 +23,7 @@ class EmfApi:
             headers={"Content-Type": "application/json"},
             timeout=timeout,
         ) as resp:
-            # API ist "quick and dirty" – wir behandeln Nicht-2xx als Fehler
+            text = await resp.text()
             if resp.status < 200 or resp.status >= 300:
-                text = await resp.text()
                 raise RuntimeError(f"EMF submit failed: HTTP {resp.status}: {text[:300]}")
+            return resp.status, text[:300]
