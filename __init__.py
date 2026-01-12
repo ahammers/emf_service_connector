@@ -29,6 +29,7 @@ from .const import (
     CONF_EM_POWER_GRID_ENTITY,
     CONF_QUEUE_MAX_LEN,
     CONF_QUEUE_MAX_SEND_PER_TICK,
+    DEFAULT_BASE_URL,
     DEFAULT_QUEUE_MAX_LEN,
     DEFAULT_QUEUE_MAX_SEND_PER_TICK,
     ADV_FIELDS,
@@ -269,7 +270,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     cfg = {**entry.data, **entry.options}
 
     session = async_get_clientsession(hass)
-    api = EmfApi(session=session, base_url=cfg[CONF_BASE_URL])
+    base_url = (cfg.get(CONF_BASE_URL) or DEFAULT_BASE_URL)
+    api = EmfApi(session=session, base_url=base_url)
 
     await _load_queue(hass, entry)
 
