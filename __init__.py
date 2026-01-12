@@ -194,6 +194,8 @@ def _notify_status_updated(hass: HomeAssistant, entry_id: str) -> None:
         f"{SIGNAL_STATUS_UPDATED}_{entry_id}",
     )
 
+async def _entry_updated(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    await hass.config_entries.async_reload(entry.entry_id)
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     hass.data.setdefault(DOMAIN, {})
@@ -202,6 +204,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry_data = _ensure_entry_data(hass, entry.entry_id)
+    config = {**entry.data, **entry.options}  # options wins
 
     session = async_get_clientsession(hass)
     api = EmfApi(session=session, base_url=entry.data[CONF_BASE_URL])
@@ -213,8 +216,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         status["last_http_status"] = None
         status["last_response_text"] = None
 
-        api_key = (entry.data.get(CONF_API_KEY) or "").strip()
-        site_fid = (entry.data.get(CONF_SITE_FID) or "").strip()
+        api_key = (config.get(CONF_API_KEY) or "").strip()
+        site_fid = (config.get(CONF_SITE_FID) or "").strip()
 
         if not api_key or not site_fid:
             status["last_error_utc"] = _now_utc_iso()
@@ -222,7 +225,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             _notify_status_updated(hass, entry.entry_id)
             return
 
-        grid_ent = entry.data.get(CONF_EM_POWER_GRID_ENTITY)
+        grid_ent = config.get(CONF_EM_POWER_GRID_ENTITY)
         if not grid_ent:
             status["last_error_utc"] = _now_utc_iso()
             status["last_error_message"] = "Missing em_power_grid entity mapping"
@@ -242,9 +245,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             "em_power_grid": grid_val,
         }
 
-        ts_mode = entry.data.get(CONF_DATAPOINT_TS_MODE, "now")
+        ts_mode = config.get(CONF_DATAPOINT_TS_MODE, "now")
         if ts_mode == "entity":
-            ts_entity = entry.data.get(CONF_DATAPOINT_TS_ENTITY)
+            ts_entity = config.get(CONF_DATAPOINT_TS_ENTITY)
             ts_state = None
             if ts_entity:
                 st = _state_obj(hass, ts_entity)
@@ -255,7 +258,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             payload["datapoint_ts"] = _format_ts_local(now)
 
         for conf_key, api_field in ADV_FIELDS:
-            ent = entry.data.get(conf_key)
+            ent = config.get(conf_key)
             if not ent:
                 continue
             val = _convert_for_field(hass, ent, api_field)
@@ -367,6 +370,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             handle_get_status,
             schema=vol.Schema({vol.Optional("entry_id"): cv.string}),
         )
+
+    entry.async_on_unload(entry.add_update_listener(_entry_updated))
 
     return True
 
