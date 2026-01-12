@@ -57,5 +57,7 @@ class EmfDebugSensor(SensorEntity):
             )
         )
 
-    def _handle_update(self) -> None:
-        self.async_write_ha_state()
+    def _handle_update(self, *args: Any) -> None:
+        # Dispatcher-Callbacks können (je nach Aufrufer) auch aus Threads kommen.
+        # async_write_ha_state MUSS im Eventloop laufen -> thread-safe scheduling.
+        self.hass.loop.call_soon_threadsafe(self.async_write_ha_state)

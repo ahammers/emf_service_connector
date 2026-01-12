@@ -186,6 +186,15 @@ def _status_for_event(entry: ConfigEntry, status: dict[str, Any]) -> dict[str, A
     }
 
 
+def _notify_status_updated(hass: HomeAssistant, entry_id: str) -> None:
+    # Sicherstellen, dass der Dispatcher immer im Event-Loop feuert
+    hass.loop.call_soon_threadsafe(
+        async_dispatcher_send,
+        hass,
+        f"{SIGNAL_STATUS_UPDATED}_{entry_id}",
+    )
+
+
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     hass.data.setdefault(DOMAIN, {})
     return True
@@ -210,21 +219,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if not api_key or not site_fid:
             status["last_error_utc"] = _now_utc_iso()
             status["last_error_message"] = "Missing api_key/site_fid"
-            async_dispatcher_send(hass, f"{SIGNAL_STATUS_UPDATED}_{entry.entry_id}")
+            _notify_status_updated(hass, entry.entry_id)
             return
 
         grid_ent = entry.data.get(CONF_EM_POWER_GRID_ENTITY)
         if not grid_ent:
             status["last_error_utc"] = _now_utc_iso()
             status["last_error_message"] = "Missing em_power_grid entity mapping"
-            async_dispatcher_send(hass, f"{SIGNAL_STATUS_UPDATED}_{entry.entry_id}")
+            _notify_status_updated(hass, entry.entry_id)
             return
 
         grid_val = _convert_for_field(hass, grid_ent, "em_power_grid")
         if grid_val is None:
             status["last_error_utc"] = _now_utc_iso()
             status["last_error_message"] = "em_power_grid unavailable/unparsable"
-            async_dispatcher_send(hass, f"{SIGNAL_STATUS_UPDATED}_{entry.entry_id}")
+            _notify_status_updated(hass, entry.entry_id)
             return
 
         payload: dict[str, object] = {
@@ -296,7 +305,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             _LOGGER.warning("EMF submit failed (%s): %s", entry.entry_id, err)
 
         # (3) Notify sensors
-        async_dispatcher_send(hass, f"{SIGNAL_STATUS_UPDATED}_{entry.entry_id}")
+        _notify_status_updated(hass, entry.entry_id)
 
     # store callable for services
     entry_data["send_func"] = _send
