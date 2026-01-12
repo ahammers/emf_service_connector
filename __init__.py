@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any
 
 import voluptuous as vol
@@ -12,9 +12,9 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import async_track_time_change
+from homeassistant.helpers.issue_registry import IssueSeverity
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
-
 from homeassistant.helpers import issue_registry as ir
 
 from .api import EmfApi
@@ -96,33 +96,39 @@ def _scale_value(value: float, from_unit: str | None, to_unit: str | None) -> fl
     if fu == "" or fu == tu:
         return value
 
+    # Power -> W
     if tu == "W":
         if fu == "kW":
             return value * 1000.0
         if fu == "MW":
             return value * 1_000_000.0
 
+    # Energy -> kWh
     if tu == "kWh":
         if fu == "Wh":
             return value / 1000.0
         if fu == "MWh":
             return value * 1000.0
 
+    # Voltage -> V
     if tu == "V":
         if fu == "mV":
             return value / 1000.0
         if fu == "kV":
             return value * 1000.0
 
+    # Current -> A
     if tu == "A":
         if fu == "mA":
             return value / 1000.0
         if fu == "kA":
             return value * 1000.0
 
+    # Temperature
     if tu in ("°C", "C"):
         return value
 
+    # Percent
     if tu == "%":
         if fu == "%":
             return value
@@ -150,6 +156,7 @@ def _convert_for_field(hass: HomeAssistant, entity_id: str, api_field: str) -> i
     target_type = spec["type"] if spec else "float"
 
     v2 = _scale_value(v, _unit(st), target_unit)
+
     if target_type == "int":
         return int(round(v2))
     return float(v2)
@@ -168,12 +175,13 @@ def _issue_id(entry_id: str) -> str:
 
 
 def _create_or_update_issue(hass: HomeAssistant, entry: ConfigEntry, message: str) -> None:
+    # One stable issue per config entry (same issue_id every time) -> gets updated, not duplicated.
     ir.async_create_issue(
         hass,
         DOMAIN,
         _issue_id(entry.entry_id),
         is_fixable=False,
-        severity=ir.IssueSeverity.WARNING,
+        severity=IssueSeverity.WARNING,
         translation_key="send_failed",
         translation_placeholders={
             "title": entry.title or "EMF Service Connector",
@@ -200,6 +208,7 @@ def _ensure_entry_data(hass: HomeAssistant, entry_id: str) -> dict[str, Any]:
             "last_success_utc": None,
             "last_error_utc": None,
             "last_error_message": None,
+            "outage_since_utc": None,
             "last_http_status": None,
             "last_response_text": None,
             "queue_len": 0,
@@ -229,6 +238,25 @@ async def _entry_updated(hass: HomeAssistant, entry: ConfigEntry) -> None:
     await hass.config_entries.async_reload(entry.entry_id)
 
 
+def _safe_err_message(err: Exception) -> str:
+    msg = str(err).strip()
+    if msg:
+        return msg
+    msg = repr(err).strip()
+    if msg:
+        return msg
+    return type(err).__name__
+
+
+def _since_local_str(outage_since_utc: str) -> str:
+    # outage_since_utc is ISO string, parse to local display
+    dt = dt_util.parse_datetime(outage_since_utc)
+    if dt is None:
+        return outage_since_utc
+    local = dt_util.as_local(dt)
+    return local.strftime("%H:%M am %d.%m.%Y")
+
+
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     hass.data.setdefault(DOMAIN, {})
     return True
@@ -237,7 +265,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry_data = _ensure_entry_data(hass, entry.entry_id)
 
-    # config = data merged with options (options win)
+    # options win over data
     cfg = {**entry.data, **entry.options}
 
     session = async_get_clientsession(hass)
@@ -287,21 +315,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     def _trim_queue() -> None:
         max_len, _ = _queue_limits()
-        if max_len <= 0:
-            # queue disabled => keep empty
-            entry_data["queue"] = []
-            return
         q = entry_data["queue"]
-        # drop oldest until within max_len
+
+        if max_len <= 0:
+            q.clear()
+            return
+
         while len(q) > max_len:
-            q.pop(0)
+            q.pop(0)  # drop oldest
 
     def _status_update_queue_len() -> None:
         entry_data["status"]["queue_len"] = len(entry_data["queue"])
 
     def _fire_all(event_type: str, payload: dict[str, Any]) -> None:
         hass.bus.async_fire(event_type, payload)
-        # Sammel-Event für "alles auf einmal abonnieren"
+        # Optional: one combined event to subscribe once in UI
         hass.bus.async_fire(EVENT_ALL, {"type": event_type, **payload})
 
     async def _try_send_queue(reason: str) -> None:
@@ -315,9 +343,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         site_fid = (cfg.get(CONF_SITE_FID) or "").strip()
 
         if not api_key or not site_fid:
-            status["last_error_utc"] = _now_utc_iso()
+            now_iso = _now_utc_iso()
+            status["last_error_utc"] = now_iso
             status["last_error_message"] = "Missing api_key/site_fid"
-            _create_or_update_issue(hass, entry, status["last_error_message"])
+            if not status.get("outage_since_utc"):
+                status["outage_since_utc"] = now_iso
+            msg = f"Übertragung zum Service seit {_since_local_str(status['outage_since_utc'])} unterbrochen: {status['last_error_message']}"
+            _create_or_update_issue(hass, entry, msg)
             _status_update_queue_len()
             _notify_status_updated(hass, entry.entry_id)
             return
@@ -328,97 +360,112 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         _, max_send = _queue_limits()
         if max_send <= 0:
-            # sending disabled
             _notify_status_updated(hass, entry.entry_id)
             return
 
         sent_count = 0
-        # newest-first => index -1
+
         while q and sent_count < max_send:
-            item = q[-1]
+            item = q[-1]  # newest-first
             full_payload = {"api_key": api_key, "site_fid": site_fid, **item}
 
             masked = dict(full_payload)
             masked["api_key"] = _mask_secret(api_key)
 
-            _fire_all(EVENT_PAYLOAD, {
-                "entry_id": entry.entry_id,
-                "reason": reason,
-                "payload": masked,
-            })
+            _fire_all(
+                EVENT_PAYLOAD,
+                {
+                    "entry_id": entry.entry_id,
+                    "reason": reason,
+                    "payload": masked,
+                },
+            )
 
             try:
                 http_status, resp_text = await api.submit_energy_data(full_payload)
+
                 status["last_success_utc"] = _now_utc_iso()
-                status["last_error_utc"] = None
-                status["last_error_message"] = None
                 status["last_http_status"] = http_status
                 status["last_response_text"] = resp_text
 
-                _fire_all(EVENT_RESULT, {
-                    "entry_id": entry.entry_id,
-                    "reason": reason,
-                    "success": True,
-                    "http_status": http_status,
-                    "response_text": resp_text,
-                })
+                # success -> clear outage markers
+                status["last_error_utc"] = None
+                status["last_error_message"] = None
+                status["outage_since_utc"] = None
 
-                # success => remove newest, continue with next newest
+                _fire_all(
+                    EVENT_RESULT,
+                    {
+                        "entry_id": entry.entry_id,
+                        "reason": reason,
+                        "success": True,
+                        "http_status": http_status,
+                        "response_text": resp_text,
+                    },
+                )
+
+                # remove newest, continue
                 q.pop()
                 sent_count += 1
                 _status_update_queue_len()
-
-                # Persist after changes (simple, robust)
                 await _save_queue(hass, entry)
 
             except Exception as err:
-                status["last_error_utc"] = _now_utc_iso()
-                status["last_error_message"] = str(err)
+                now_iso = _now_utc_iso()
+                status["last_error_utc"] = now_iso
+                status["last_error_message"] = _safe_err_message(err)
 
-                _fire_all(EVENT_RESULT, {
-                    "entry_id": entry.entry_id,
-                    "reason": reason,
-                    "success": False,
-                    "error": str(err),
-                })
+                if not status.get("outage_since_utc"):
+                    status["outage_since_utc"] = now_iso
 
-                _create_or_update_issue(hass, entry, status["last_error_message"])
-                _LOGGER.warning("EMF submit failed (%s): %s", entry.entry_id, err)
+                since_str = _since_local_str(status["outage_since_utc"])
+                issue_msg = f"Übertragung zum Service seit {since_str} unterbrochen: {status['last_error_message']}"
+                _create_or_update_issue(hass, entry, issue_msg)
 
-                # stop on first failure (newest-first rule)
+                _fire_all(
+                    EVENT_RESULT,
+                    {
+                        "entry_id": entry.entry_id,
+                        "reason": reason,
+                        "success": False,
+                        "error": status["last_error_message"],
+                    },
+                )
+
+                _LOGGER.warning("EMF submit failed (%s): %s", entry.entry_id, status["last_error_message"])
+
+                # newest-first rule: stop on first failure
                 break
 
-        # If queue is empty, clear issue
-        if not q and status.get("last_error_message") is None:
+        # If queue is empty and no current outage -> clear issue
+        if not q and status.get("outage_since_utc") is None:
             _delete_issue(hass, entry)
 
         _notify_status_updated(hass, entry.entry_id)
 
     async def _tick(now: datetime, reason: str) -> None:
-        # build one item and enqueue (if possible)
+        # Build one item and enqueue
         item = await _build_queue_item(now)
-        if item is not None:
-            max_len, _ = _queue_limits()
-            if max_len > 0:
-                entry_data["queue"].append(item)
-                _trim_queue()
-                _status_update_queue_len()
-                await _save_queue(hass, entry)
-            else:
-                # queue disabled => do not store
-                entry_data["queue"] = []
-                _status_update_queue_len()
 
-        # try sending from queue
+        max_len, _ = _queue_limits()
+        if max_len > 0 and item is not None:
+            entry_data["queue"].append(item)
+            _trim_queue()
+            _status_update_queue_len()
+            await _save_queue(hass, entry)
+        else:
+            # queue disabled OR no item -> keep queue as-is but ensure trim
+            _trim_queue()
+            _status_update_queue_len()
+
         await _try_send_queue(reason=reason)
 
-    # store send_func for services
+    # Expose for services
     entry_data["send_func"] = _tick
 
     async def _time_change(now: datetime) -> None:
         await _tick(now, reason="schedule")
 
-    # schedule every 5 min at second 0 (as before)
     unsub: CALLBACK_TYPE = async_track_time_change(
         hass,
         _time_change,
@@ -427,13 +474,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
     entry_data["unsub"] = unsub
 
-    # Forward sensor platform
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-
-    # Reload on options change
     entry.async_on_unload(entry.add_update_listener(_entry_updated))
 
-    # Register services once
+    # Register services once globally
     if not hass.data[DOMAIN].get("_services_registered"):
         hass.data[DOMAIN]["_services_registered"] = True
 
@@ -458,11 +502,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             for ce in targets:
                 ed = _ensure_entry_data(hass, ce.entry_id)
                 st = ed.get("status", {})
-                hass.bus.async_fire(EVENT_STATUS, {
-                    "entry_id": ce.entry_id,
-                    "title": ce.title,
-                    **st,
-                })
+                hass.bus.async_fire(
+                    EVENT_STATUS,
+                    {
+                        "entry_id": ce.entry_id,
+                        "title": ce.title,
+                        **st,
+                    },
+                )
 
         hass.services.async_register(
             DOMAIN,
