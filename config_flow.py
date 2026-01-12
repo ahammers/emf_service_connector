@@ -14,16 +14,18 @@ from .const import (
     CONF_DATAPOINT_TS_MODE,
     CONF_DATAPOINT_TS_ENTITY,
     CONF_EM_POWER_GRID_ENTITY,
+    CONF_QUEUE_MAX_LEN,
+    CONF_QUEUE_MAX_SEND_PER_TICK,
     ADV_FIELDS,
     DEFAULT_BASE_URL,
+    DEFAULT_QUEUE_MAX_LEN,
+    DEFAULT_QUEUE_MAX_SEND_PER_TICK,
 )
 
 
 def _entity_sel(domains: list[str] | None = None) -> dict:
     filt = {"domain": domains} if domains else {}
-    return selector.selector(
-        {"entity": {"filter": filt, "multiple": False}}
-    )
+    return selector.selector({"entity": {"filter": filt, "multiple": False}})
 
 
 class EmfServiceConnectorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -51,9 +53,11 @@ class EmfServiceConnectorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 ),
                 vol.Optional(CONF_DATAPOINT_TS_ENTITY): _entity_sel(),
                 vol.Required(CONF_EM_POWER_GRID_ENTITY): _entity_sel(domains=["sensor", "number", "input_number"]),
+                # Queue defaults (can be changed later via options)
+                vol.Required(CONF_QUEUE_MAX_LEN, default=DEFAULT_QUEUE_MAX_LEN): vol.All(int, vol.Range(min=0)),
+                vol.Required(CONF_QUEUE_MAX_SEND_PER_TICK, default=DEFAULT_QUEUE_MAX_SEND_PER_TICK): vol.All(int, vol.Range(min=0)),
             }
         )
-
         return self.async_show_form(step_id="user", data_schema=schema)
 
     @staticmethod
@@ -68,15 +72,11 @@ class EmfServiceConnectorOptionsFlow(config_entries.OptionsFlow):
         self._standard: dict = {}
 
     async def async_step_init(self, user_input=None):
-        # current config = data merged with options (options wins)
         current = {**self.entry.data, **self.entry.options}
 
         if user_input is not None:
             self._standard = dict(user_input)
-            return self.async_show_menu(
-                step_id="menu",
-                menu_options=["finish", "advanced"],
-            )
+            return self.async_show_menu(step_id="menu", menu_options=["finish", "advanced"])
 
         schema = vol.Schema(
             {
@@ -98,6 +98,8 @@ class EmfServiceConnectorOptionsFlow(config_entries.OptionsFlow):
                 vol.Required(CONF_EM_POWER_GRID_ENTITY, default=current.get(CONF_EM_POWER_GRID_ENTITY)): _entity_sel(
                     domains=["sensor", "number", "input_number"]
                 ),
+                vol.Required(CONF_QUEUE_MAX_LEN, default=current.get(CONF_QUEUE_MAX_LEN, DEFAULT_QUEUE_MAX_LEN)): vol.All(int, vol.Range(min=0)),
+                vol.Required(CONF_QUEUE_MAX_SEND_PER_TICK, default=current.get(CONF_QUEUE_MAX_SEND_PER_TICK, DEFAULT_QUEUE_MAX_SEND_PER_TICK)): vol.All(int, vol.Range(min=0)),
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema)
@@ -106,7 +108,6 @@ class EmfServiceConnectorOptionsFlow(config_entries.OptionsFlow):
         return self.async_show_menu(step_id="menu", menu_options=["finish", "advanced"])
 
     async def async_step_finish(self, user_input=None):
-        # Only store options (not data)
         return self.async_create_entry(title="", data=self._standard)
 
     async def async_step_advanced(self, user_input=None):
@@ -121,5 +122,4 @@ class EmfServiceConnectorOptionsFlow(config_entries.OptionsFlow):
             adv_schema_dict[vol.Optional(conf_key, default=current.get(conf_key))] = _entity_sel(
                 domains=["sensor", "number", "input_number"]
             )
-
         return self.async_show_form(step_id="advanced", data_schema=vol.Schema(adv_schema_dict))

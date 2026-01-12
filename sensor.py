@@ -19,19 +19,19 @@ class _Field:
 
 
 FIELDS = [
-    _Field("last_attempt_utc", "Last attempt (UTC)"),
-    _Field("last_success_utc", "Last success (UTC)"),
-    _Field("last_error_utc", "Last error (UTC)"),
-    _Field("last_error_message", "Last error message"),
-    _Field("last_http_status", "Last HTTP status"),
+    _Field("last_success_utc", "Last successful transmission (UTC)"),
+    _Field("last_attempt_utc", "Last transmission attempt (UTC)"),
+    _Field("last_error_utc", "Last transmission failure (UTC)"),
+    _Field("last_error_message", "Last transmission failure reason"),
+    _Field("queue_len", "Payload queue length"),
 ]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
-    async_add_entities([EmfDebugSensor(hass, entry, f) for f in FIELDS], update_before_add=False)
+    async_add_entities([EmfStatusSensor(hass, entry, f) for f in FIELDS], update_before_add=False)
 
 
-class EmfDebugSensor(SensorEntity):
+class EmfStatusSensor(SensorEntity):
     _attr_has_entity_name = True
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry, field: _Field) -> None:
@@ -58,6 +58,5 @@ class EmfDebugSensor(SensorEntity):
         )
 
     def _handle_update(self, *args: Any) -> None:
-        # Dispatcher-Callbacks können (je nach Aufrufer) auch aus Threads kommen.
-        # async_write_ha_state MUSS im Eventloop laufen -> thread-safe scheduling.
+        # Thread-safe scheduling into HA event loop
         self.hass.loop.call_soon_threadsafe(self.async_write_ha_state)

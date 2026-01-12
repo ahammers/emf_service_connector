@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 import voluptuous as vol
@@ -12,10 +12,10 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import async_track_time_change
-from homeassistant.helpers import entity_platform
-from homeassistant.helpers import service
-from homeassistant.helpers.typing import ConfigType
+from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
+
+from homeassistant.helpers import issue_registry as ir
 
 from .api import EmfApi
 from .const import (
@@ -27,6 +27,10 @@ from .const import (
     CONF_DATAPOINT_TS_MODE,
     CONF_DATAPOINT_TS_ENTITY,
     CONF_EM_POWER_GRID_ENTITY,
+    CONF_QUEUE_MAX_LEN,
+    CONF_QUEUE_MAX_SEND_PER_TICK,
+    DEFAULT_QUEUE_MAX_LEN,
+    DEFAULT_QUEUE_MAX_SEND_PER_TICK,
     ADV_FIELDS,
     FIELD_SPECS,
     SEND_EVERY_MINUTES,
@@ -34,11 +38,14 @@ from .const import (
     EVENT_PAYLOAD,
     EVENT_RESULT,
     EVENT_STATUS,
+    EVENT_ALL,
     SERVICE_SEND_NOW,
     SERVICE_GET_STATUS,
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+_STORE_VERSION = 1
 
 
 def _mask_secret(s: str | None) -> str | None:
@@ -89,39 +96,33 @@ def _scale_value(value: float, from_unit: str | None, to_unit: str | None) -> fl
     if fu == "" or fu == tu:
         return value
 
-    # Power -> W
     if tu == "W":
         if fu == "kW":
             return value * 1000.0
         if fu == "MW":
             return value * 1_000_000.0
 
-    # Energy -> kWh
     if tu == "kWh":
         if fu == "Wh":
             return value / 1000.0
         if fu == "MWh":
             return value * 1000.0
 
-    # Voltage -> V
     if tu == "V":
         if fu == "mV":
             return value / 1000.0
         if fu == "kV":
             return value * 1000.0
 
-    # Current -> A
     if tu == "A":
         if fu == "mA":
             return value / 1000.0
         if fu == "kA":
             return value * 1000.0
 
-    # Temperature
     if tu in ("°C", "C"):
         return value
 
-    # Percent
     if tu == "%":
         if fu == "%":
             return value
@@ -149,173 +150,275 @@ def _convert_for_field(hass: HomeAssistant, entity_id: str, api_field: str) -> i
     target_type = spec["type"] if spec else "float"
 
     v2 = _scale_value(v, _unit(st), target_unit)
-
     if target_type == "int":
         return int(round(v2))
     return float(v2)
 
 
-def _ensure_entry_data(hass: HomeAssistant, entry_id: str) -> dict[str, Any]:
-    hass.data.setdefault(DOMAIN, {})
-    entry_data = hass.data[DOMAIN].setdefault(entry_id, {})
-    entry_data.setdefault("status", {
-        "last_attempt_utc": None,
-        "last_success_utc": None,
-        "last_error_utc": None,
-        "last_error_message": None,
-        "last_http_status": None,
-        "last_response_text": None,
-        "last_payload": None,         # unmasked (internal)
-        "last_payload_masked": None,  # safe for events/diagnostics
-    })
-    return entry_data
-
-
-def _status_for_event(entry: ConfigEntry, status: dict[str, Any]) -> dict[str, Any]:
-    # safe representation for events/diagnostics
-    return {
-        "entry_id": entry.entry_id,
-        "title": entry.title,
-        "last_attempt_utc": status.get("last_attempt_utc"),
-        "last_success_utc": status.get("last_success_utc"),
-        "last_error_utc": status.get("last_error_utc"),
-        "last_error_message": status.get("last_error_message"),
-        "last_http_status": status.get("last_http_status"),
-        "last_response_text": status.get("last_response_text"),
-        "last_payload": status.get("last_payload_masked"),
-    }
-
-
 def _notify_status_updated(hass: HomeAssistant, entry_id: str) -> None:
-    # Sicherstellen, dass der Dispatcher immer im Event-Loop feuert
     hass.loop.call_soon_threadsafe(
         async_dispatcher_send,
         hass,
         f"{SIGNAL_STATUS_UPDATED}_{entry_id}",
     )
 
+
+def _issue_id(entry_id: str) -> str:
+    return f"send_failed_{entry_id}"
+
+
+def _create_or_update_issue(hass: HomeAssistant, entry: ConfigEntry, message: str) -> None:
+    ir.async_create_issue(
+        hass,
+        DOMAIN,
+        _issue_id(entry.entry_id),
+        is_fixable=False,
+        severity=ir.IssueSeverity.WARNING,
+        translation_key="send_failed",
+        translation_placeholders={
+            "title": entry.title or "EMF Service Connector",
+            "message": message,
+        },
+    )
+
+
+def _delete_issue(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    ir.async_delete_issue(hass, DOMAIN, _issue_id(entry.entry_id))
+
+
+def _store_for_entry(hass: HomeAssistant, entry_id: str) -> Store:
+    return Store(hass, _STORE_VERSION, f"{DOMAIN}.{entry_id}")
+
+
+def _ensure_entry_data(hass: HomeAssistant, entry_id: str) -> dict[str, Any]:
+    hass.data.setdefault(DOMAIN, {})
+    entry_data = hass.data[DOMAIN].setdefault(entry_id, {})
+    entry_data.setdefault(
+        "status",
+        {
+            "last_attempt_utc": None,
+            "last_success_utc": None,
+            "last_error_utc": None,
+            "last_error_message": None,
+            "last_http_status": None,
+            "last_response_text": None,
+            "queue_len": 0,
+        },
+    )
+    entry_data.setdefault("queue", [])  # list[dict] oldest..newest
+    entry_data.setdefault("store", _store_for_entry(hass, entry_id))
+    return entry_data
+
+
+async def _load_queue(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    entry_data = _ensure_entry_data(hass, entry.entry_id)
+    store: Store = entry_data["store"]
+    data = await store.async_load()
+    if isinstance(data, dict) and isinstance(data.get("queue"), list):
+        entry_data["queue"] = data["queue"]
+    entry_data["status"]["queue_len"] = len(entry_data["queue"])
+
+
+async def _save_queue(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    entry_data = _ensure_entry_data(hass, entry.entry_id)
+    store: Store = entry_data["store"]
+    await store.async_save({"queue": entry_data["queue"]})
+
+
 async def _entry_updated(hass: HomeAssistant, entry: ConfigEntry) -> None:
     await hass.config_entries.async_reload(entry.entry_id)
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     hass.data.setdefault(DOMAIN, {})
     return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry_data = _ensure_entry_data(hass, entry.entry_id)
-    config = {**entry.data, **entry.options}  # options wins
+
+    # config = data merged with options (options win)
+    cfg = {**entry.data, **entry.options}
 
     session = async_get_clientsession(hass)
-    api = EmfApi(session=session, base_url=entry.data[CONF_BASE_URL])
+    api = EmfApi(session=session, base_url=cfg[CONF_BASE_URL])
 
-    async def _send(now: datetime, reason: str) -> None:
-        status = entry_data["status"]
-        status["last_attempt_utc"] = _now_utc_iso()
-        status["last_error_message"] = None
-        status["last_http_status"] = None
-        status["last_response_text"] = None
+    await _load_queue(hass, entry)
 
-        api_key = (config.get(CONF_API_KEY) or "").strip()
-        site_fid = (config.get(CONF_SITE_FID) or "").strip()
-
-        if not api_key or not site_fid:
-            status["last_error_utc"] = _now_utc_iso()
-            status["last_error_message"] = "Missing api_key/site_fid"
-            _notify_status_updated(hass, entry.entry_id)
-            return
-
-        grid_ent = config.get(CONF_EM_POWER_GRID_ENTITY)
+    async def _build_queue_item(now: datetime) -> dict[str, Any] | None:
+        """Build a queue item WITHOUT api_key/site_fid. Contains datapoint_ts + fields."""
+        grid_ent = cfg.get(CONF_EM_POWER_GRID_ENTITY)
         if not grid_ent:
-            status["last_error_utc"] = _now_utc_iso()
-            status["last_error_message"] = "Missing em_power_grid entity mapping"
-            _notify_status_updated(hass, entry.entry_id)
-            return
+            return None
 
         grid_val = _convert_for_field(hass, grid_ent, "em_power_grid")
         if grid_val is None:
-            status["last_error_utc"] = _now_utc_iso()
-            status["last_error_message"] = "em_power_grid unavailable/unparsable"
-            _notify_status_updated(hass, entry.entry_id)
-            return
+            return None
 
-        payload: dict[str, object] = {
-            "api_key": api_key,
-            "site_fid": site_fid,
-            "em_power_grid": grid_val,
-        }
+        item: dict[str, Any] = {"em_power_grid": grid_val}
 
-        ts_mode = config.get(CONF_DATAPOINT_TS_MODE, "now")
+        ts_mode = cfg.get(CONF_DATAPOINT_TS_MODE, "now")
         if ts_mode == "entity":
-            ts_entity = config.get(CONF_DATAPOINT_TS_ENTITY)
+            ts_entity = cfg.get(CONF_DATAPOINT_TS_ENTITY)
             ts_state = None
             if ts_entity:
                 st = _state_obj(hass, ts_entity)
                 if st and (st.state or "").strip() not in ("unknown", "unavailable", ""):
                     ts_state = (st.state or "").strip()
-            payload["datapoint_ts"] = ts_state or _format_ts_local(now)
+            item["datapoint_ts"] = ts_state or _format_ts_local(now)
         else:
-            payload["datapoint_ts"] = _format_ts_local(now)
+            item["datapoint_ts"] = _format_ts_local(now)
 
         for conf_key, api_field in ADV_FIELDS:
-            ent = config.get(conf_key)
+            ent = cfg.get(conf_key)
             if not ent:
                 continue
             val = _convert_for_field(hass, ent, api_field)
             if val is None:
                 continue
-            payload[api_field] = val
+            item[api_field] = val
 
-        # masked payload for events/diagnostics
-        masked = dict(payload)
-        masked["api_key"] = _mask_secret(api_key)
+        return item
 
-        status["last_payload"] = payload
-        status["last_payload_masked"] = masked
+    def _queue_limits() -> tuple[int, int]:
+        max_len = int(cfg.get(CONF_QUEUE_MAX_LEN, DEFAULT_QUEUE_MAX_LEN) or 0)
+        max_send = int(cfg.get(CONF_QUEUE_MAX_SEND_PER_TICK, DEFAULT_QUEUE_MAX_SEND_PER_TICK) or 0)
+        return max_len, max_send
 
-        # (2) Event: payload
-        hass.bus.async_fire(EVENT_PAYLOAD, {
-            "entry_id": entry.entry_id,
-            "reason": reason,
-            "payload": masked,
-        })
+    def _trim_queue() -> None:
+        max_len, _ = _queue_limits()
+        if max_len <= 0:
+            # queue disabled => keep empty
+            entry_data["queue"] = []
+            return
+        q = entry_data["queue"]
+        # drop oldest until within max_len
+        while len(q) > max_len:
+            q.pop(0)
 
-        try:
-            http_status, resp_text = await api.submit_energy_data(payload)
-            status["last_success_utc"] = _now_utc_iso()
-            status["last_http_status"] = http_status
-            status["last_response_text"] = resp_text
+    def _status_update_queue_len() -> None:
+        entry_data["status"]["queue_len"] = len(entry_data["queue"])
 
-            # (2) Event: result
-            hass.bus.async_fire(EVENT_RESULT, {
-                "entry_id": entry.entry_id,
-                "reason": reason,
-                "success": True,
-                "http_status": http_status,
-                "response_text": resp_text,
-            })
-        except Exception as err:
+    def _fire_all(event_type: str, payload: dict[str, Any]) -> None:
+        hass.bus.async_fire(event_type, payload)
+        # Sammel-Event für "alles auf einmal abonnieren"
+        hass.bus.async_fire(EVENT_ALL, {"type": event_type, **payload})
+
+    async def _try_send_queue(reason: str) -> None:
+        """Try sending newest-first. Stop on first failure. Up to max_send_per_tick."""
+        status = entry_data["status"]
+        status["last_attempt_utc"] = _now_utc_iso()
+        status["last_http_status"] = None
+        status["last_response_text"] = None
+
+        api_key = (cfg.get(CONF_API_KEY) or "").strip()
+        site_fid = (cfg.get(CONF_SITE_FID) or "").strip()
+
+        if not api_key or not site_fid:
             status["last_error_utc"] = _now_utc_iso()
-            status["last_error_message"] = str(err)
+            status["last_error_message"] = "Missing api_key/site_fid"
+            _create_or_update_issue(hass, entry, status["last_error_message"])
+            _status_update_queue_len()
+            _notify_status_updated(hass, entry.entry_id)
+            return
 
-            hass.bus.async_fire(EVENT_RESULT, {
+        q = entry_data["queue"]
+        _trim_queue()
+        _status_update_queue_len()
+
+        _, max_send = _queue_limits()
+        if max_send <= 0:
+            # sending disabled
+            _notify_status_updated(hass, entry.entry_id)
+            return
+
+        sent_count = 0
+        # newest-first => index -1
+        while q and sent_count < max_send:
+            item = q[-1]
+            full_payload = {"api_key": api_key, "site_fid": site_fid, **item}
+
+            masked = dict(full_payload)
+            masked["api_key"] = _mask_secret(api_key)
+
+            _fire_all(EVENT_PAYLOAD, {
                 "entry_id": entry.entry_id,
                 "reason": reason,
-                "success": False,
-                "error": str(err),
+                "payload": masked,
             })
 
-            _LOGGER.warning("EMF submit failed (%s): %s", entry.entry_id, err)
+            try:
+                http_status, resp_text = await api.submit_energy_data(full_payload)
+                status["last_success_utc"] = _now_utc_iso()
+                status["last_error_utc"] = None
+                status["last_error_message"] = None
+                status["last_http_status"] = http_status
+                status["last_response_text"] = resp_text
 
-        # (3) Notify sensors
+                _fire_all(EVENT_RESULT, {
+                    "entry_id": entry.entry_id,
+                    "reason": reason,
+                    "success": True,
+                    "http_status": http_status,
+                    "response_text": resp_text,
+                })
+
+                # success => remove newest, continue with next newest
+                q.pop()
+                sent_count += 1
+                _status_update_queue_len()
+
+                # Persist after changes (simple, robust)
+                await _save_queue(hass, entry)
+
+            except Exception as err:
+                status["last_error_utc"] = _now_utc_iso()
+                status["last_error_message"] = str(err)
+
+                _fire_all(EVENT_RESULT, {
+                    "entry_id": entry.entry_id,
+                    "reason": reason,
+                    "success": False,
+                    "error": str(err),
+                })
+
+                _create_or_update_issue(hass, entry, status["last_error_message"])
+                _LOGGER.warning("EMF submit failed (%s): %s", entry.entry_id, err)
+
+                # stop on first failure (newest-first rule)
+                break
+
+        # If queue is empty, clear issue
+        if not q and status.get("last_error_message") is None:
+            _delete_issue(hass, entry)
+
         _notify_status_updated(hass, entry.entry_id)
 
-    # store callable for services
-    entry_data["send_func"] = _send
+    async def _tick(now: datetime, reason: str) -> None:
+        # build one item and enqueue (if possible)
+        item = await _build_queue_item(now)
+        if item is not None:
+            max_len, _ = _queue_limits()
+            if max_len > 0:
+                entry_data["queue"].append(item)
+                _trim_queue()
+                _status_update_queue_len()
+                await _save_queue(hass, entry)
+            else:
+                # queue disabled => do not store
+                entry_data["queue"] = []
+                _status_update_queue_len()
+
+        # try sending from queue
+        await _try_send_queue(reason=reason)
+
+    # store send_func for services
+    entry_data["send_func"] = _tick
 
     async def _time_change(now: datetime) -> None:
-        await _send(now, reason="schedule")
+        await _tick(now, reason="schedule")
 
+    # schedule every 5 min at second 0 (as before)
     unsub: CALLBACK_TYPE = async_track_time_change(
         hass,
         _time_change,
@@ -324,8 +427,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
     entry_data["unsub"] = unsub
 
-    # (4) Debug entities via sensor platform
+    # Forward sensor platform
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    # Reload on options change
+    entry.async_on_unload(entry.add_update_listener(_entry_updated))
 
     # Register services once
     if not hass.data[DOMAIN].get("_services_registered"):
@@ -335,11 +441,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             entry_id = call.data.get("entry_id")
             if entry_id:
                 ce = hass.config_entries.async_get_entry(entry_id)
-                if ce:
-                    return [ce]
-                return []
-
-            # no entry_id provided -> all entries of this domain
+                return [ce] if ce else []
             return [e for e in hass.config_entries.async_entries(DOMAIN)]
 
         async def handle_send_now(call: ServiceCall) -> None:
@@ -347,16 +449,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             now = dt_util.utcnow()
             for ce in targets:
                 ed = _ensure_entry_data(hass, ce.entry_id)
-                send_func = ed.get("send_func")
-                if send_func:
-                    await send_func(now, reason="service_send_now")
+                func = ed.get("send_func")
+                if func:
+                    await func(now, reason="service_send_now")
 
         async def handle_get_status(call: ServiceCall) -> None:
             targets = await _iter_target_entries(call)
             for ce in targets:
                 ed = _ensure_entry_data(hass, ce.entry_id)
-                status = ed.get("status", {})
-                hass.bus.async_fire(EVENT_STATUS, _status_for_event(ce, status))
+                st = ed.get("status", {})
+                hass.bus.async_fire(EVENT_STATUS, {
+                    "entry_id": ce.entry_id,
+                    "title": ce.title,
+                    **st,
+                })
 
         hass.services.async_register(
             DOMAIN,
@@ -371,19 +477,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             schema=vol.Schema({vol.Optional("entry_id"): cv.string}),
         )
 
-    entry.async_on_unload(entry.add_update_listener(_entry_updated))
-
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry_data = hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
-    unload_ok = True
 
     if entry_data and (unsub := entry_data.get("unsub")):
         unsub()
 
-    # unload platforms (sensors)
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-
     return unload_ok

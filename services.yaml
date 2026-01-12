@@ -1,17 +1,15 @@
 send_now:
   name: Send now
-  description: Immediately submit energy data (useful for testing).
+  description: Enqueue current datapoint and immediately try sending from queue (newest first).
   fields:
     entry_id:
       name: Entry ID
-      description: Optional config entry id. If omitted, all EMF Service Connector entries are triggered.
-      example: "abc123def456..."
+      description: Optional config entry id. If omitted, all entries are triggered.
 
 get_status:
   name: Get status
-  description: Emits an event with the last status information (payload masked).
+  description: Emits an event with the current status.
   fields:
     entry_id:
       name: Entry ID
       description: Optional config entry id. If omitted, emits status for all entries.
-      example: "abc123def456..."

@@ -16,5 +16,11 @@
         }
       }
     }
+  },
+  "issues": {
+    "send_failed": {
+      "title": "Transmission failed",
+      "description": "{title}: {message}"
+    }
   }
 }
