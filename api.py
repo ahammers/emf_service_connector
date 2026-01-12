@@ -15,7 +15,7 @@ class EmfApi:
 
     async def submit_energy_data(self, payload: dict[str, Any]) -> tuple[int, str]:
         url = f"{self.base_url.rstrip('/')}{SUBMIT_PATH}"
-        timeout = ClientTimeout(total=20)
+        timeout = ClientTimeout(total=60)
 
         async with self.session.post(
             url,
