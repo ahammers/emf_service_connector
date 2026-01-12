@@ -1,0 +1,6 @@
+{
+  "name": "EMF Service Connector",
+  "content_in_root": false,
+  "domains": ["emf_service_connector"],
+  "homeassistant": "2024.6.0"
+}

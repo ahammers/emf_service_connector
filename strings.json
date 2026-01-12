@@ -1,0 +1,20 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "EMF Service Connector",
+        "description": "Zuordnung: Welche Entitäten sollen in welche API-Felder gesendet werden?"
+      },
+      "advanced": {
+        "title": "Erweiterte Felder (optional)"
+      },
+      "menu": {
+        "title": "Weiter",
+        "menu_options": {
+          "finish": "Fertigstellen",
+          "advanced": "Erweitert (optional)"
+        }
+      }
+    }
+  }
+}

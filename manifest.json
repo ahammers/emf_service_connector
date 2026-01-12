@@ -1,0 +1,10 @@
+{
+  "domain": "emf_service_connector",
+  "name": "EMF Service Connector",
+  "version": "1.0.0",
+  "documentation": "https://github.com/yourname/emf_service_connector",
+  "config_flow": true,
+  "requirements": [],
+  "codeowners": [],
+  "iot_class": "cloud_push"
+}

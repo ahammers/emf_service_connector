@@ -1,0 +1,20 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "EMF Service Connector",
+        "description": "Map entities to API fields."
+      },
+      "advanced": {
+        "title": "Advanced fields (optional)"
+      },
+      "menu": {
+        "title": "Next",
+        "menu_options": {
+          "finish": "Finish",
+          "advanced": "Advanced (optional)"
+        }
+      }
+    }
+  }
+}
