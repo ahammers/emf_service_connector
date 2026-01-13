@@ -65,14 +65,8 @@ def _endpoint_selector() -> dict:
                 "mode": "dropdown",
                 "custom_value": True,   # <-- freie Eingabe erlaubt
                 "options": [
-                    {
-                        "value": "http://ems001.amberquest.at:8444/api/submit_energy_data",
-                        "label": "ems001.amberquest.at (legacy)",
-                    },
-                    {
-                        "value": "http://emf.hammerschmidt.at/api/v1/submit_energy_data",
-                        "label": "emf.hammerschmidt.at (v1)",
-                    },
+                    "http://ems001.amberquest.at:8444/api/submit_energy_data",
+                    "http://emf.hammerschmidt.at/api/v1/submit_energy_data",
                 ],
             }
         }
