@@ -1,7 +1,7 @@
 {
   "domain": "emf_service_connector",
   "name": "EMF Service Connector",
-  "version": "0.1.31",
+  "version": "0.1.35",
   "documentation": "https://github.com/ahammers/emf_service_connector",
   "config_flow": true,
   "requirements": [],

@@ -66,6 +66,9 @@ def _format_ts_local(dt: datetime) -> str:
     local = dt_util.as_local(dt)
     return local.strftime("%Y-%m-%d %H:%M:%S")
 
+def _format_ts_utc(dt: datetime) -> str:
+    utc_dt = dt_util.as_utc(dt)
+    return utc_dt.strftime("%Y-%m-%dT%H:%M:%S")
 
 def _state_obj(hass: HomeAssistant, entity_id: str | None):
     if not entity_id:
@@ -295,9 +298,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 st = _state_obj(hass, ts_entity)
                 if st and (st.state or "").strip() not in ("unknown", "unavailable", ""):
                     ts_state = (st.state or "").strip()
-            item["datapoint_ts"] = ts_state or _format_ts_local(now)
+            item["datapoint_ts"] = ts_state or _format_ts_utc(now)
         else:
-            item["datapoint_ts"] = _format_ts_local(now)
+            item["datapoint_ts"] = _format_ts_utc(now)
 
         for conf_key, api_field in ADV_FIELDS:
             ent = cfg.get(conf_key)
