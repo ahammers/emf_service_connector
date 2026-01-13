@@ -16,7 +16,45 @@
         }
       },
       "advanced": {
-        "title": "Advanced fields (optional)"
+        "title": "Advanced fields (optional)",
+        "data": {
+          "base_url": "Base URL",
+          "datapoint_ts_mode": "Datapoint Timestamp Mode",
+          "datapoint_ts_entity": "Datapoint Timestamp Entity",
+          "queue_max_len": "Queue Maximum Length",
+          "queue_max_send_per_tick": "Queue Maximum Sends Per Tick",
+          "em_power_consumption_entity": "Total Power Consumption Entity",
+          "em_power_pv_entity": "Photovoltaic Power Production Entity",
+          "em_power_battery_entity": "Battery Power Entity",
+          "em_power_evcharger_entity": "EV Charger Power Entity",
+          "em_power_heatpump_entity": "Heat Pump Power Entity",
+          "em_power_bhkw_entity": "CHP Power Entity",
+          "bat_soc_entity": "Battery State of Charge Entity",
+          "bat_kwh_remaining_entity": "Battery kWh Remaining Entity",
+          "bat_dc_power_entity": "Battery DC Power Entity",
+          "bat_dc_voltage_entity": "Battery DC Voltage Entity",
+          "bat_dc_current_entity": "Battery DC Current Entity",
+          "bat_dc_temperature_entity": "Battery DC Temperature Entity"
+        },
+        "data_description": {
+          "base_url": "Custom base URL for the EMF service API.",
+          "datapoint_ts_mode": "Mode for datapoint timestamps (e.g., 'entity' or 'now').",
+          "datapoint_ts_entity": "Entity to use for datapoint timestamps if 'entity' mode is selected.",
+          "queue_max_len": "Maximum length of the data queue before old entries are discarded.",
+          "queue_max_send_per_tick": "Maximum number of entries to send per update tick.",
+          "em_power_consumption_entity": "Entity measuring total power consumption (positive = consumption).",
+          "em_power_pv_entity": "Entity measuring photovoltaic power production (positive = production).",
+          "em_power_battery_entity": "Entity measuring battery power flow (positive = charging).",
+          "em_power_evcharger_entity": "Entity measuring EV charger power flow (positive = charging).",
+          "em_power_heatpump_entity": "Entity measuring heat pump power flow (positive = heating).",
+          "em_power_bhkw_entity": "Entity measuring CHP power flow (positive = production).",
+          "bat_soc_entity": "Entity measuring battery state of charge in percent (SOC).",
+          "bat_kwh_remaining_entity": "Entity measuring remaining battery capacity in kWh.",
+          "bat_dc_power_entity": "Entity measuring battery DC power.",
+          "bat_dc_voltage_entity": "Entity measuring battery DC voltage.",
+          "bat_dc_current_entity": "Entity measuring battery DC current.",
+          "bat_dc_temperature_entity": "Entity measuring battery DC temperature."
+        }
       },
       "menu": {
         "title": "Next",
@@ -48,7 +86,45 @@
         }
       },
       "advanced": {
-        "title": "Advanced fields (optional)"
+        "title": "Advanced fields (optional)",
+        "data": {
+          "base_url": "Base URL",
+          "datapoint_ts_mode": "Datapoint Timestamp Mode",
+          "datapoint_ts_entity": "Datapoint Timestamp Entity",
+          "queue_max_len": "Queue Maximum Length",
+          "queue_max_send_per_tick": "Queue Maximum Sends Per Tick",
+          "em_power_consumption_entity": "Total Power Consumption Entity",
+          "em_power_pv_entity": "Photovoltaic Power Production Entity",
+          "em_power_battery_entity": "Battery Power Entity",
+          "em_power_evcharger_entity": "EV Charger Power Entity",
+          "em_power_heatpump_entity": "Heat Pump Power Entity",
+          "em_power_bhkw_entity": "CHP Power Entity",
+          "bat_soc_entity": "Battery State of Charge Entity",
+          "bat_kwh_remaining_entity": "Battery kWh Remaining Entity",
+          "bat_dc_power_entity": "Battery DC Power Entity",
+          "bat_dc_voltage_entity": "Battery DC Voltage Entity",
+          "bat_dc_current_entity": "Battery DC Current Entity",
+          "bat_dc_temperature_entity": "Battery DC Temperature Entity"
+        },
+        "data_description": {
+          "base_url": "Custom base URL for the EMF service API.",
+          "datapoint_ts_mode": "Mode for datapoint timestamps (e.g., 'entity' or 'now').",
+          "datapoint_ts_entity": "Entity to use for datapoint timestamps if 'entity' mode is selected.",
+          "queue_max_len": "Maximum length of the data queue before old entries are discarded.",
+          "queue_max_send_per_tick": "Maximum number of entries to send per update tick.",
+          "em_power_consumption_entity": "Entity measuring total power consumption (positive = consumption).",
+          "em_power_pv_entity": "Entity measuring photovoltaic power production (positive = production).",
+          "em_power_battery_entity": "Entity measuring battery power flow (positive = charging).",
+          "em_power_evcharger_entity": "Entity measuring EV charger power flow (positive = charging).",
+          "em_power_heatpump_entity": "Entity measuring heat pump power flow (positive = heating).",
+          "em_power_bhkw_entity": "Entity measuring CHP power flow (positive = production).",
+          "bat_soc_entity": "Entity measuring battery state of charge in percent (SOC).",
+          "bat_kwh_remaining_entity": "Entity measuring remaining battery capacity in kWh.",
+          "bat_dc_power_entity": "Entity measuring battery DC power.",
+          "bat_dc_voltage_entity": "Entity measuring battery DC voltage.",
+          "bat_dc_current_entity": "Entity measuring battery DC current.",
+          "bat_dc_temperature_entity": "Entity measuring battery DC temperature."
+        }        
       },
       "menu": {
         "title": "Next",

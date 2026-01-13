@@ -16,7 +16,45 @@
         }
       },
       "advanced": {
-        "title": "Erweiterte Felder (optional)"
+        "title": "Erweiterte Felder (optional)",
+        "data": {
+          "base_url": "Basis-URL",
+          "datapoint_ts_mode": "Zeitstempel-Modus für Datenpunkte",
+          "datapoint_ts_entity": "Entität für Datenpunkt-Zeitstempel",
+          "queue_max_len": "Maximale Warteschlangen-Länge",
+          "queue_max_send_per_tick": "Maximale Sendevorgänge pro Tick",
+          "em_power_consumption_entity": "Entität für Gesamtstromverbrauch",
+          "em_power_pv_entity": "Entität für Photovoltaik-Stromproduktion",
+          "em_power_battery_entity": "Entität für Batteriestrom",
+          "em_power_evcharger_entity": "Entität für Elektroauto-Ladestrom",
+          "em_power_heatpump_entity": "Entität für Wärmepumpenstrom",
+          "em_power_bhkw_entity": "Entität für Blockheizkraft-Strom",
+          "bat_soc_entity": "Entität für Batterie-Ladezustand",
+          "bat_kwh_remaining_entity": "Entität für verbleibende Batterie-Kapazität",
+          "bat_dc_power_entity": "Entität für Batterie-DC-Leistung",
+          "bat_dc_voltage_entity": "Entität für Batterie-DC-Spannung",
+          "bat_dc_current_entity": "Entität für Batterie-DC-Strom",
+          "bat_dc_temperature_entity": "Entität für Batterie-DC-Temperatur"
+        },
+        "data_description": {
+          "base_url": "Benutzerdefinierte Basis-URL für die EMF-Service-API.",
+          "datapoint_ts_mode": "Modus für Datenpunkt-Zeitstempel (z. B. 'entity' oder 'now').",
+          "datapoint_ts_entity": "Entität, die für Datenpunkt-Zeitstempel verwendet werden soll, wenn der Modus 'entity' ausgewählt ist.",
+          "queue_max_len": "Maximale Länge der Datenwarteschlange, bevor alte Einträge verworfen werden.",
+          "queue_max_send_per_tick": "Maximale Anzahl von Einträgen, die pro Update-Tick gesendet werden.",
+          "em_power_consumption_entity": "Entität, die den Gesamtstromverbrauch misst (positiv = Verbrauch).",
+          "em_power_pv_entity": "Entität, die die Photovoltaik-Stromproduktion misst (positiv = Produktion).",
+          "em_power_battery_entity": "Entität, die den Batterie-Stromfluss misst (positiv = Laden).",
+          "em_power_evcharger_entity": "Entität, die den Elektroauto-Lader-Stromfluss misst (positiv = Laden).",
+          "em_power_heatpump_entity": "Entität, die den Wärmepumpen-Stromfluss misst (positiv = Heizen).",
+          "em_power_bhkw_entity": "Entität, die den Blockheizkraft-Stromfluss misst (positiv = Produktion).",
+          "bat_soc_entity": "Entität, die den Batterie-Ladezustand in Prozent (SOC) misst.",
+          "bat_kwh_remaining_entity": "Entität, die die verbleibende Batterie-Kapazität in kWh misst.",
+          "bat_dc_power_entity": "Entität, die die Batterie-DC-Leistung misst.",
+          "bat_dc_voltage_entity": "Entität, die die Batterie-DC-Spannung misst.",
+          "bat_dc_current_entity": "Entität, die den Batterie-DC-Strom misst.",
+          "bat_dc_temperature_entity": "Entität, die die Batterie-DC-Temperatur misst."
+        }        
       },
       "menu": {
         "title": "Weiter",
@@ -48,7 +86,45 @@
         }
       },
       "advanced": {
-        "title": "Erweiterte Felder (optional)"
+        "title": "Erweiterte Felder (optional)",
+        "data": {
+          "base_url": "Basis-URL",
+          "datapoint_ts_mode": "Zeitstempel-Modus für Datenpunkte",
+          "datapoint_ts_entity": "Entität für Datenpunkt-Zeitstempel",
+          "queue_max_len": "Maximale Warteschlangen-Länge",
+          "queue_max_send_per_tick": "Maximale Sendevorgänge pro Tick",
+          "em_power_consumption_entity": "Entität für Gesamtstromverbrauch",
+          "em_power_pv_entity": "Entität für Photovoltaik-Stromproduktion",
+          "em_power_battery_entity": "Entität für Batteriestrom",
+          "em_power_evcharger_entity": "Entität für Elektroauto-Ladestrom",
+          "em_power_heatpump_entity": "Entität für Wärmepumpenstrom",
+          "em_power_bhkw_entity": "Entität für Blockheizkraft-Strom",
+          "bat_soc_entity": "Entität für Batterie-Ladezustand",
+          "bat_kwh_remaining_entity": "Entität für verbleibende Batterie-Kapazität",
+          "bat_dc_power_entity": "Entität für Batterie-DC-Leistung",
+          "bat_dc_voltage_entity": "Entität für Batterie-DC-Spannung",
+          "bat_dc_current_entity": "Entität für Batterie-DC-Strom",
+          "bat_dc_temperature_entity": "Entität für Batterie-DC-Temperatur"
+        },
+        "data_description": {
+          "base_url": "Benutzerdefinierte Basis-URL für die EMF-Service-API.",
+          "datapoint_ts_mode": "Modus für Datenpunkt-Zeitstempel (z. B. 'entity' oder 'now').",
+          "datapoint_ts_entity": "Entität, die für Datenpunkt-Zeitstempel verwendet werden soll, wenn der Modus 'entity' ausgewählt ist.",
+          "queue_max_len": "Maximale Länge der Datenwarteschlange, bevor alte Einträge verworfen werden.",
+          "queue_max_send_per_tick": "Maximale Anzahl von Einträgen, die pro Update-Tick gesendet werden.",
+          "em_power_consumption_entity": "Entität, die den Gesamtstromverbrauch misst (positiv = Verbrauch).",
+          "em_power_pv_entity": "Entität, die die Photovoltaik-Stromproduktion misst (positiv = Produktion).",
+          "em_power_battery_entity": "Entität, die den Batterie-Stromfluss misst (positiv = Laden).",
+          "em_power_evcharger_entity": "Entität, die den Elektroauto-Lader-Stromfluss misst (positiv = Laden).",
+          "em_power_heatpump_entity": "Entität, die den Wärmepumpen-Stromfluss misst (positiv = Heizen).",
+          "em_power_bhkw_entity": "Entität, die den Blockheizkraft-Stromfluss misst (positiv = Produktion).",
+          "bat_soc_entity": "Entität, die den Batterie-Ladezustand in Prozent (SOC) misst.",
+          "bat_kwh_remaining_entity": "Entität, die die verbleibende Batterie-Kapazität in kWh misst.",
+          "bat_dc_power_entity": "Entität, die die Batterie-DC-Leistung misst.",
+          "bat_dc_voltage_entity": "Entität, die die Batterie-DC-Spannung misst.",
+          "bat_dc_current_entity": "Entität, die den Batterie-DC-Strom misst.",
+          "bat_dc_temperature_entity": "Entität, die die Batterie-DC-Temperatur misst."
+        }
       },
       "menu": {
         "title": "Weiter",
