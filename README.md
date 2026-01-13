@@ -102,6 +102,7 @@ Sendet sofort Daten (unabhängig vom Zeitplan).
 service: emf_service_connector.send_now
 data:
   entry_id: abcdef123456
+```
 
 ### `emf_service_connector.get_status`
 
