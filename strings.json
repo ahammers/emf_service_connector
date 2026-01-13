@@ -3,7 +3,12 @@
     "step": {
       "user": {
         "title": "EMF Service Connector",
-        "description": "Zuordnung der Home-Assistant-Entitäten zu den EMF-API-Feldern."
+        "description": "Zuordnung der Home-Assistant-Entitäten zu den EMF-API-Feldern.",
+        "data": {
+          "api_key": "API-Schlüssel",
+          "site_fid": "Anlagennummer",
+          "em_power_grid_entity": "Netzbezug-Entität"
+        }
       },
       "advanced": {
         "title": "Erweiterte Felder (optional)"
@@ -14,19 +19,19 @@
           "finish": "Fertigstellen",
           "advanced": "Erweitert (optional)"
         }
-      },
-      "data": {
-        "api_key": "API-Schlüssel",
-        "site_fid": "Anlagennummer",
-        "em_power_grid_entity": "Netzbezug-Entität"
       }
     }
   },
   "options": {
     "step": {
-      "user": {
+      "init": {
         "title": "EMF Service Connector",
-        "description": "Zuordnung der Home-Assistant-Entitäten zu den EMF-API-Feldern."
+        "description": "Zuordnung der Home-Assistant-Entitäten zu den EMF-API-Feldern.",
+        "data": {
+          "api_key": "API-Schlüssel",
+          "site_fid": "Anlagennummer",
+          "em_power_grid_entity": "Netzbezug-Entität"
+        }
       },
       "advanced": {
         "title": "Erweiterte Felder (optional)"
@@ -37,11 +42,6 @@
           "finish": "Fertigstellen",
           "advanced": "Erweitert (optional)"
         }
-      },
-      "data": {
-        "api_key": "API-Schlüssel",
-        "site_fid": "Anlagennummer",
-        "em_power_grid_entity": "Netzbezug-Entität"
       }
     }
   },

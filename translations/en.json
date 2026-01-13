@@ -3,7 +3,12 @@
     "step": {
       "user": {
         "title": "EMF Service Connector",
-        "description": "Map entities to API fields."
+        "description": "Map entities to API fields.",
+        "data": {
+          "api_key": "API key",
+          "site_fid": "Site ID",
+          "em_power_grid_entity": "EM Power Grid Entity"
+        }
       },
       "advanced": {
         "title": "Advanced fields (optional)"
@@ -14,19 +19,19 @@
           "finish": "Finish",
           "advanced": "Advanced (optional)"
         }
-      },
-      "data": {
-        "api_key": "API key",
-        "site_fid": "Site ID",
-        "em_power_grid_entity": "EM Power Grid Entity"
       }
     }
   },
   "options": {
     "step": {
-      "user": {
+      "init": {
         "title": "EMF Service Connector",
-        "description": "Map entities to API fields."
+        "description": "Map entities to API fields.",
+        "data": {
+          "api_key": "API key",
+          "site_fid": "Site ID",
+          "em_power_grid_entity": "EM Power Grid Entity"
+        }
       },
       "advanced": {
         "title": "Advanced fields (optional)"
@@ -37,11 +42,6 @@
           "finish": "Finish",
           "advanced": "Advanced (optional)"
         }
-      },
-      "data": {
-        "api_key": "API key",
-        "site_fid": "Site ID",
-        "em_power_grid_entity": "EM Power Grid Entity"
       }
     }
   },
