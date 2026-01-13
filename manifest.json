@@ -1,8 +1,8 @@
 {
   "domain": "emf_service_connector",
   "name": "EMF Service Connector",
-  "version": "1.0.0",
-  "documentation": "https://github.com/yourname/emf_service_connector",
+  "version": "0.1.21",
+  "documentation": "https://github.com/ahammers/emf_service_connector",
   "config_flow": true,
   "requirements": [],
   "codeowners": [],
