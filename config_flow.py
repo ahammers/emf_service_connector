@@ -65,6 +65,10 @@ class EmfServiceConnectorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         self._standard: dict = {}
 
+    def _entry_title_from_site(self, data: dict) -> str:
+        site = data.get(CONF_SITE_FID) or "UNKNOWN"
+        return f"EMF Service Connection to {site}"
+
     async def async_step_user(self, user_input=None):
         """
         Standard step: minimal required fields only.
@@ -89,12 +93,12 @@ class EmfServiceConnectorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_finish(self, user_input=None):
         # store standard only (advanced optional via options)
         data = dict(self._standard)
-        return self.async_create_entry(title="EMF Service Connector", data=data)
+        return self.async_create_entry(title=self._entry_title_from_site(data), data=data)
 
     async def async_step_advanced(self, user_input=None):
         if user_input is not None:
             data = {**self._standard, **_sanitize_ts_fields(dict(user_input))}
-            return self.async_create_entry(title="EMF Service Connector", data=data)
+            return self.async_create_entry(title=self._entry_title_from_site(data), data=data)
 
         # Defaults for advanced on first setup
         adv = {
