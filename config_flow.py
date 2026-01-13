@@ -58,6 +58,25 @@ def _merge_current(entry: config_entries.ConfigEntry) -> dict:
     # options win
     return {**entry.data, **entry.options}
 
+def _endpoint_selector() -> dict:
+    return selector.selector(
+        {
+            "select": {
+                "mode": "dropdown",
+                "custom_value": True,   # <-- freie Eingabe erlaubt
+                "options": [
+                    {
+                        "value": "http://ems001.amberquest.at:8444/api/submit_energy_data",
+                        "label": "ems001.amberquest.at (legacy)",
+                    },
+                    {
+                        "value": "http://emf.hammerschmidt.at/api/v1/submit_energy_data",
+                        "label": "emf.hammerschmidt.at (v1)",
+                    },
+                ],
+            }
+        }
+    )
 
 class EmfServiceConnectorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
@@ -109,7 +128,7 @@ class EmfServiceConnectorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         }
 
         adv_schema_dict: dict = {
-            vol.Required(CONF_BASE_URL, default=adv[CONF_BASE_URL]): str,
+            vol.Required(CONF_BASE_URL, default=DEFAULT_BASE_URL): _endpoint_selector(),
             vol.Required(CONF_DATAPOINT_TS_MODE, default=adv[CONF_DATAPOINT_TS_MODE]): _select_ts_mode(),
             # Important: NO default=None here -> avoids "Entity None ..." validation issues
             vol.Optional(CONF_DATAPOINT_TS_ENTITY): _entity_sel(),
@@ -173,7 +192,7 @@ class EmfServiceConnectorOptionsFlow(config_entries.OptionsFlow):
 
         # Advanced options: must allow saving unchanged even if datapoint_ts_entity is absent.
         adv_schema_dict: dict = {
-            vol.Required(CONF_BASE_URL, default=current.get(CONF_BASE_URL, DEFAULT_BASE_URL)): str,
+            vol.Required(CONF_BASE_URL, default=current.get(CONF_BASE_URL, DEFAULT_BASE_URL)): _endpoint_selector(),
             vol.Required(CONF_DATAPOINT_TS_MODE, default=current.get(CONF_DATAPOINT_TS_MODE, "now")): _select_ts_mode(),
             # CRITICAL FIX: only set default if we actually have a value. If None, omit default completely.
             (vol.Optional(CONF_DATAPOINT_TS_ENTITY, default=current[CONF_DATAPOINT_TS_ENTITY])
