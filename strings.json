@@ -3,30 +3,30 @@
     "step": {
       "user": {
         "title": "EMF Service Connector",
-        "description": "Zuordnung der Home-Assistant-Entitäten zu den EMF-API-Feldern.",
+        "description": "Map entities to API fields.",
         "data": {
-          "api_key": "API-Schlüssel",
-          "site_fid": "Anlagennummer",
-          "em_power_grid_entity": "Netzbezug-Entität"
+          "api_key": "API key",
+          "site_fid": "Site ID",
+          "em_power_grid_entity": "EM Power Grid Entity"
         },
-        "data_descriptions": {
-          "api_key": "API-Schlüssel für den EMF-Service (erhältlich im EMF-Benutzerportal)",
-          "site_fid": "Eindeutige ID der Anlage (im EMF-Benutzerportal unter Anlagendetails zu finden)",
-          "em_power_grid_entity": "Die SmartMeter-Entität, die den Netzbezug misst. Positiver Wert = Bezug vom Netz."
+        "data_description": {
+          "api_key": "API key for the EMF service (available in the EMF user portal)",
+          "site_fid": "Unique ID of the site (findable in the EMF user portal under site details)",
+          "em_power_grid_entity": "The SmartMeter entity measuring grid consumption. Positive value = consumption from the grid."
         }
       },
       "advanced": {
-        "title": "Erweiterte Felder (optional)"
+        "title": "Advanced fields (optional)"
       },
       "menu": {
-        "title": "Weiter",
+        "title": "Next",
         "menu_options": {
-          "finish": "Fertigstellen",
-          "advanced": "Erweitert (optional)"
+          "finish": "Finish",
+          "advanced": "Advanced (optional)"
         },
         "menu_option_descriptions": {
-          "finish": "Beenden und die Konfiguration speichern.",
-          "advanced": "Erweiterte Felder konfigurieren."
+          "finish": "Complete and save the configuration.",
+          "advanced": "Configure advanced fields."
         }
       }
     }
@@ -35,37 +35,37 @@
     "step": {
       "init": {
         "title": "EMF Service Connector",
-        "description": "Zuordnung der Home-Assistant-Entitäten zu den EMF-API-Feldern.",
+        "description": "Map entities to API fields.",
         "data": {
-          "api_key": "API-Schlüssel",
-          "site_fid": "Anlagennummer",
-          "em_power_grid_entity": "Netzbezug-Entität"
+          "api_key": "API key",
+          "site_fid": "Site ID",
+          "em_power_grid_entity": "EM Power Grid Entity"
         },
-        "data_descriptions": {
-          "api_key": "API-Schlüssel für den EMF-Service (erhältlich im EMF-Benutzerportal)",
-          "site_fid": "Eindeutige ID der Anlage (im EMF-Benutzerportal unter Anlagendetails zu finden)",
-          "em_power_grid_entity": "Die SmartMeter-Entität, die den Netzbezug misst. Positiver Wert = Bezug vom Netz."
+        "data_description": {
+          "api_key": "API key for the EMF service (available in the EMF user portal)",
+          "site_fid": "Unique ID of the site (findable in the EMF user portal under site details)",
+          "em_power_grid_entity": "The SmartMeter entity measuring grid consumption. Positive value = consumption from the grid."
         }
       },
       "advanced": {
-        "title": "Erweiterte Felder (optional)"
+        "title": "Advanced fields (optional)"
       },
       "menu": {
-        "title": "Weiter",
+        "title": "Next",
         "menu_options": {
-          "finish": "Fertigstellen",
-          "advanced": "Erweitert (optional)"
+          "finish": "Finish",
+          "advanced": "Advanced (optional)"
         },
         "menu_option_descriptions": {
-          "finish": "Beenden und die Konfiguration speichern.",
-          "advanced": "Erweiterte Felder konfigurieren."
+          "finish": "Complete and save the configuration.",
+          "advanced": "Configure advanced fields."
         }
       }
     }
   },
   "issues": {
     "send_failed": {
-      "title": "Übertragung fehlgeschlagen",
+      "title": "Transmission failed",
       "description": "{title}: {message}"
     }
   }
