@@ -10,7 +10,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, SIGNAL_STATUS_UPDATED
+from .const import DOMAIN, SIGNAL_STATUS_UPDATED, CONF_SITE_FID
 
 
 @dataclass(frozen=True)
@@ -50,7 +50,10 @@ class _BaseEmfSensor(SensorEntity):
         self.field = field
 
         self._attr_unique_id = f"{entry.entry_id}_{field.key}"
-        self._attr_name = field.name
+
+        cfg = {**entry.data, **entry.options}  # options win
+        site = (cfg.get(CONF_SITE_FID) or "UNKNOWN").strip()
+        self._attr_name = f"{site}_{field.name}"
 
     @property
     def native_value(self) -> Any:
