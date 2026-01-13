@@ -103,6 +103,97 @@ service: emf_service_connector.send_now
 data:
   entry_id: abcdef123456
 
----
+### `emf_service_connector.get_status`
+
+Gibt den aktuellen Status per Event aus.
+
+**Parameter:**
+
+- `entry_id` *(optional)* – nur für eine bestimmte Instanz
+
+## Events (Debug & Monitoring)
+
+Die Integration feuert mehrere Events zur Diagnose.
+
+### `emf_payload`
+
+Wird vor dem Senden ausgelöst.
+
+Enthält:
+
+- maskiertes Payload
+
+- Grund (schedule, service_send_now, …)
+
+### `emf_result`
+
+Ergebnis eines Sendeversuchs.
+
+Feld	Bedeutung
+- success	... true / false
+- http_status	... HTTP-Status (falls vorhanden)
+- response_text	... Antwort des Servers
+- error	... Fehlermeldung (bei Fehlern)
+
+### `emf_status`
+
+Aktueller Status einer Instanz.
+
+Enthält u. a.:
+- letzter Sendeversuch
+- letzter Erfolg
+- letzte Fehlermeldung
+- Queue-Länge
+- Outage-Startzeit
+
+### `emf_all`
+
+Kombiniertes Event für alle oben genannten Typen
+(empfohlen für einfache Debug-Abos im UI).
+
+## Reparaturen / Issues
+
+Bei anhaltenden Übertragungsfehlern wird pro Instanz genau ein
+Reparatur-Eintrag erstellt.
+
+- Kein Spam (stabile Issue-ID)
+- Aktualisiert sich automatisch
+- Verschwindet bei erfolgreicher Übertragung
+
+## Mehrere Anlagen
+
+Du kannst mehrere Instanzen anlegen, z. B.:
+
+EMF Service Connection to SITE_A
+EMF Service Connection to SITE_B
+
+Jede Instanz:
+- hat eigene Queue
+- eigenen Zeitplan
+- eigene Reparatur-Meldungen
+
+## Sicherheit
+
+- API-Keys werden nicht im Klartext geloggt
+- Events enthalten nur maskierte Schlüssel
+- Persistente Daten liegen verschlüsselt im HA-Storage
+
+## Entwicklung & Support
+
+- Repository: https://github.com/ahammers/emf_service_connector
+- Issues & Feature-Requests bitte über GitHub
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 (Information updated with version 0.1.21)
