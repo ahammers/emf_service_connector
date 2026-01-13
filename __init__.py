@@ -24,8 +24,6 @@ from .const import (
     CONF_BASE_URL,
     CONF_API_KEY,
     CONF_SITE_FID,
-    CONF_DATAPOINT_TS_MODE,
-    CONF_DATAPOINT_TS_ENTITY,
     CONF_EM_POWER_GRID_ENTITY,
     CONF_QUEUE_MAX_LEN,
     CONF_QUEUE_MAX_SEND_PER_TICK,
@@ -42,6 +40,7 @@ from .const import (
     EVENT_ALL,
     SERVICE_SEND_NOW,
     SERVICE_GET_STATUS,
+    SERVICE_CLEAR_QUEUE,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -216,6 +215,9 @@ def _ensure_entry_data(hass: HomeAssistant, entry_id: str) -> dict[str, Any]:
             "last_http_status": None,
             "last_response_text": None,
             "queue_len": 0,
+            "dropped_422_count": 0,
+            "dropped_queue_full_count": 0,
+            "last_drop_reason": None,
         },
     )
     entry_data.setdefault("queue", [])  # list[dict] oldest..newest
@@ -288,18 +290,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             return None
 
         item: dict[str, Any] = {"em_power_grid": grid_val}
-
-        ts_mode = cfg.get(CONF_DATAPOINT_TS_MODE, "now")
-        if ts_mode == "entity":
-            ts_entity = cfg.get(CONF_DATAPOINT_TS_ENTITY)
-            ts_state = None
-            if ts_entity:
-                st = _state_obj(hass, ts_entity)
-                if st and (st.state or "").strip() not in ("unknown", "unavailable", ""):
-                    ts_state = (st.state or "").strip()
-            item["datapoint_ts"] = ts_state or _format_ts_utc(now)
-        else:
-            item["datapoint_ts"] = _format_ts_utc(now)
+        item["datapoint_ts"] = _format_ts_utc(now)
 
         for conf_key, api_field in ADV_FIELDS:
             ent = cfg.get(conf_key)
@@ -327,6 +318,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         while len(q) > max_len:
             q.pop(0)  # drop oldest
+            entry_data["status"]["dropped_queue_full_count"] = int(entry_data["status"].get("dropped_queue_full_count", 0)) + 1
+            entry_data["status"]["last_drop_reason"] = "queue_full (dropped oldest)"
 
     def _status_update_queue_len() -> None:
         entry_data["status"]["queue_len"] = len(entry_data["queue"])
@@ -367,9 +360,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             _notify_status_updated(hass, entry.entry_id)
             return
 
-        sent_count = 0
+        processed_count = 0
 
-        while q and sent_count < max_send:
+        while q and processed_count < max_send:
             item = q[-1]  # newest-first
             full_payload = {"api_key": api_key, "site_fid": site_fid, **item}
 
@@ -388,32 +381,66 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             try:
                 http_status, resp_text = await api.submit_energy_data(full_payload)
 
-                status["last_success_utc"] = _now_utc_iso()
+                # 2xx -> success
+                if 200 <= http_status < 300:
+                    status["last_success_utc"] = _now_utc_iso()
+                    status["last_http_status"] = http_status
+                    status["last_response_text"] = resp_text
+
+                    # success -> clear outage markers
+                    status["last_error_utc"] = None
+                    status["last_error_message"] = None
+                    status["outage_since_utc"] = None
+
+                    _fire_all(
+                        EVENT_RESULT,
+                        {
+                            "entry_id": entry.entry_id,
+                            "reason": reason,
+                            "success": True,
+                            "http_status": http_status,
+                            "response_text": resp_text,
+                        },
+                    )
+
+                    # remove newest, continue
+                    q.pop()
+                    processed_count += 1
+                    _status_update_queue_len()
+                    await _save_queue(hass, entry)
+                    continue
+
+                # 422 -> permanent validation error -> drop record and continue with next
+                if http_status == 422:
+                    status["dropped_422_count"] = int(status.get("dropped_422_count", 0)) + 1
+                    status["last_drop_reason"] = f"HTTP 422: {resp_text}"
+                    status["last_http_status"] = http_status
+                    status["last_response_text"] = resp_text
+
+                    _fire_all(
+                        EVENT_RESULT,
+                        {
+                            "entry_id": entry.entry_id,
+                            "reason": reason,
+                            "success": False,
+                            "http_status": http_status,
+                            "response_text": resp_text,
+                            "dropped": True,
+                            "dropped_reason": status["last_drop_reason"],
+                        },
+                    )
+
+                    # drop newest and continue
+                    q.pop()
+                    processed_count += 1
+                    _status_update_queue_len()
+                    await _save_queue(hass, entry)
+                    continue
+
+                # other non-2xx -> treat as failure, keep queue, stop (newest-first rule)
                 status["last_http_status"] = http_status
                 status["last_response_text"] = resp_text
-
-                # success -> clear outage markers
-                status["last_error_utc"] = None
-                status["last_error_message"] = None
-                status["outage_since_utc"] = None
-
-                _fire_all(
-                    EVENT_RESULT,
-                    {
-                        "entry_id": entry.entry_id,
-                        "reason": reason,
-                        "success": True,
-                        "http_status": http_status,
-                        "response_text": resp_text,
-                    },
-                )
-
-                # remove newest, continue
-                q.pop()
-                sent_count += 1
-                _status_update_queue_len()
-                await _save_queue(hass, entry)
-
+                raise RuntimeError(f"EMF submit failed: HTTP {http_status}: {resp_text}")
             except Exception as err:
                 now_iso = _now_utc_iso()
                 status["last_error_utc"] = now_iso
@@ -515,6 +542,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     },
                 )
 
+        async def handle_clear_queue(call: ServiceCall) -> None:
+            targets = await _iter_target_entries(call)
+            for ce in targets:
+                ed = _ensure_entry_data(hass, ce.entry_id)
+                ed["queue"].clear()
+                ed["status"]["queue_len"] = 0
+                # persist immediately
+                store: Store = ed["store"]
+                await store.async_save({"queue": ed["queue"]})
+                _notify_status_updated(hass, ce.entry_id)
+
         hass.services.async_register(
             DOMAIN,
             SERVICE_SEND_NOW,
@@ -525,6 +563,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             DOMAIN,
             SERVICE_GET_STATUS,
             handle_get_status,
+            schema=vol.Schema({vol.Optional("entry_id"): cv.string}),
+        )
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_CLEAR_QUEUE,
+            handle_clear_queue,
             schema=vol.Schema({vol.Optional("entry_id"): cv.string}),
         )
 

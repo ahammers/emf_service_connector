@@ -13,3 +13,11 @@ get_status:
     entry_id:
       name: Entry ID
       description: Optional config entry id. If omitted, emits status for all entries.
+
+clear_queue:
+  name: Clear queue
+  description: Clears the persistent payload queue (drops all queued records).
+  fields:
+    entry_id:
+      name: Entry ID
+      description: Optional config entry id. If omitted, clears the queue for all entries.

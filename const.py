@@ -5,8 +5,6 @@ DOMAIN = "emf_service_connector"
 CONF_BASE_URL = "base_url"
 CONF_API_KEY = "api_key"
 CONF_SITE_FID = "site_fid"
-CONF_DATAPOINT_TS_MODE = "datapoint_ts_mode"  # "now" | "entity"
-CONF_DATAPOINT_TS_ENTITY = "datapoint_ts_entity"
 CONF_EM_POWER_GRID_ENTITY = "em_power_grid_entity"
 
 # Queue options
@@ -32,6 +30,7 @@ EVENT_ALL = "emf_service_connector_event"  # optional: Sammel-Event
 
 SERVICE_SEND_NOW = "send_now"
 SERVICE_GET_STATUS = "get_status"
+SERVICE_CLEAR_QUEUE = "clear_queue"
 
 # Advanced (optional, entity per field)
 ADV_FIELDS = [

@@ -41,5 +41,8 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ConfigE
             "last_http_status": status.get("last_http_status"),
             "last_response_text": status.get("last_response_text"),
             "last_payload": status.get("last_payload_masked"),
+            "dropped_422_count": status.get("dropped_422_count"),
+            "dropped_queue_full_count": status.get("dropped_queue_full_count"),
+            "last_drop_reason": status.get("last_drop_reason"),
         },
     }

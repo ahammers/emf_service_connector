@@ -5,8 +5,6 @@ from typing import Any
 
 from aiohttp import ClientSession, ClientTimeout
 
-from .const import DEFAULT_BASE_URL
-
 
 @dataclass(frozen=True)
 class EmfApi:
@@ -14,6 +12,13 @@ class EmfApi:
     base_url: str
 
     async def submit_energy_data(self, payload: dict[str, Any]) -> tuple[int, str]:
+        """Submit payload and return (http_status, response_text).
+
+        Note: We intentionally do NOT raise on non-2xx responses because the caller
+        needs to distinguish between transient failures (retry) and permanent ones
+        (e.g. HTTP 422 -> drop queued record).
+        Network/transport errors will still raise aiohttp exceptions.
+        """
         url = self.base_url
         timeout = ClientTimeout(total=60)
 
@@ -24,6 +29,4 @@ class EmfApi:
             timeout=timeout,
         ) as resp:
             text = await resp.text()
-            if resp.status < 200 or resp.status >= 300:
-                raise RuntimeError(f"EMF submit failed: HTTP {resp.status}: {text[:300]}")
-            return resp.status, text[:300]
+            return resp.status, (text or "")[:300]

@@ -25,6 +25,9 @@ STATUS_FIELDS = [
     _Field("last_attempt_utc", "Last transmission attempt (UTC)"),
     _Field("last_error_utc", "Last transmission failure (UTC)"),
     _Field("last_error_message", "Last transmission failure reason"),
+    _Field("dropped_422_count", "Dropped records (HTTP 422)"),
+    _Field("dropped_queue_full_count", "Dropped records (queue full)"),
+    _Field("last_drop_reason", "Last drop reason"),
 ]
 
 # This field SHOULD be recorded to visualize outages/backlog.

@@ -11,8 +11,6 @@ from .const import (
     CONF_BASE_URL,
     CONF_API_KEY,
     CONF_SITE_FID,
-    CONF_DATAPOINT_TS_MODE,
-    CONF_DATAPOINT_TS_ENTITY,
     CONF_EM_POWER_GRID_ENTITY,
     CONF_QUEUE_MAX_LEN,
     CONF_QUEUE_MAX_SEND_PER_TICK,
@@ -26,33 +24,6 @@ from .const import (
 def _entity_sel(domains: list[str] | None = None) -> dict:
     filt = {"domain": domains} if domains else {}
     return selector.selector({"entity": {"filter": filt, "multiple": False}})
-
-
-def _select_ts_mode(default: str = "now") -> dict:
-    return selector.selector(
-        {
-            "select": {
-                "options": [
-                    {"value": "now", "label": "now (Home Assistant Zeit)"},
-                    {"value": "entity", "label": "aus Entität"},
-                ],
-                "mode": "dropdown",
-            }
-        }
-    )
-
-
-def _sanitize_ts_fields(data: dict) -> dict:
-    """Ensure datapoint_ts_entity is only stored/validated when mode == entity."""
-    mode = data.get(CONF_DATAPOINT_TS_MODE, "now")
-    if mode != "entity":
-        data.pop(CONF_DATAPOINT_TS_ENTITY, None)
-    else:
-        # If mode is entity but no entity given, keep it missing -> later validation will catch if required
-        if not data.get(CONF_DATAPOINT_TS_ENTITY):
-            data.pop(CONF_DATAPOINT_TS_ENTITY, None)
-    return data
-
 
 def _merge_current(entry: config_entries.ConfigEntry) -> dict:
     # options win
@@ -110,22 +81,18 @@ class EmfServiceConnectorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_advanced(self, user_input=None):
         if user_input is not None:
-            data = {**self._standard, **_sanitize_ts_fields(dict(user_input))}
+            data = {**self._standard, **dict(user_input)}
             return self.async_create_entry(title=self._entry_title_from_site(data), data=data)
 
         # Defaults for advanced on first setup
         adv = {
             CONF_BASE_URL: DEFAULT_BASE_URL,
-            CONF_DATAPOINT_TS_MODE: "now",
             CONF_QUEUE_MAX_LEN: DEFAULT_QUEUE_MAX_LEN,
             CONF_QUEUE_MAX_SEND_PER_TICK: DEFAULT_QUEUE_MAX_SEND_PER_TICK,
         }
 
         adv_schema_dict: dict = {
             vol.Required(CONF_BASE_URL, default=DEFAULT_BASE_URL): _endpoint_selector(),
-            vol.Required(CONF_DATAPOINT_TS_MODE, default=adv[CONF_DATAPOINT_TS_MODE]): _select_ts_mode(),
-            # Important: NO default=None here -> avoids "Entity None ..." validation issues
-            vol.Optional(CONF_DATAPOINT_TS_ENTITY): _entity_sel(),
             vol.Required(CONF_QUEUE_MAX_LEN, default=adv[CONF_QUEUE_MAX_LEN]): vol.All(int, vol.Range(min=0)),
             vol.Required(CONF_QUEUE_MAX_SEND_PER_TICK, default=adv[CONF_QUEUE_MAX_SEND_PER_TICK]): vol.All(int, vol.Range(min=0)),
         }
@@ -174,23 +141,19 @@ class EmfServiceConnectorOptionsFlow(config_entries.OptionsFlow):
 
     async def async_step_finish(self, user_input=None):
         # only store options; also sanitize ts fields the same way as initial setup
-        options = _sanitize_ts_fields(dict(self._standard))
+        options = dict(self._standard)
         return self.async_create_entry(title="", data=options)
 
     async def async_step_advanced(self, user_input=None):
         current = _merge_current(self.entry)
 
         if user_input is not None:
-            data = {**self._standard, **_sanitize_ts_fields(dict(user_input))}
+            data = {**self._standard, **dict(user_input)}
             return self.async_create_entry(title="", data=data)
 
         # Advanced options: must allow saving unchanged even if datapoint_ts_entity is absent.
         adv_schema_dict: dict = {
             vol.Required(CONF_BASE_URL, default=current.get(CONF_BASE_URL, DEFAULT_BASE_URL)): _endpoint_selector(),
-            vol.Required(CONF_DATAPOINT_TS_MODE, default=current.get(CONF_DATAPOINT_TS_MODE, "now")): _select_ts_mode(),
-            # CRITICAL FIX: only set default if we actually have a value. If None, omit default completely.
-            (vol.Optional(CONF_DATAPOINT_TS_ENTITY, default=current[CONF_DATAPOINT_TS_ENTITY])
-             if current.get(CONF_DATAPOINT_TS_ENTITY) else vol.Optional(CONF_DATAPOINT_TS_ENTITY)): _entity_sel(),
             vol.Required(CONF_QUEUE_MAX_LEN, default=current.get(CONF_QUEUE_MAX_LEN, DEFAULT_QUEUE_MAX_LEN)): vol.All(int, vol.Range(min=0)),
             vol.Required(CONF_QUEUE_MAX_SEND_PER_TICK, default=current.get(CONF_QUEUE_MAX_SEND_PER_TICK, DEFAULT_QUEUE_MAX_SEND_PER_TICK)): vol.All(int, vol.Range(min=0)),
         }
