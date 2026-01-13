@@ -260,6 +260,12 @@ def _since_local_str(outage_since_utc: str) -> str:
     local = dt_util.as_local(dt)
     return local.strftime("%H:%M am %d.%m.%Y")
 
+def _since_utc_str(outage_since_utc: str) -> str:
+    dt = dt_util.parse_datetime(outage_since_utc)
+    if dt is None:
+        return outage_since_utc
+    utc_formatted = dt_util.as_utc(dt).strftime("%H:%M UTC %d.%m.%Y")
+    return utc_formatted
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     hass.data.setdefault(DOMAIN, {})
@@ -353,7 +359,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             status["last_error_message"] = "Missing api_key/site_fid"
             if not status.get("outage_since_utc"):
                 status["outage_since_utc"] = now_iso
-            msg = f"Übertragung zum Service seit {_since_local_str(status['outage_since_utc'])} unterbrochen: {status['last_error_message']}"
+            msg = f"Übertragung zum Service seit {_since_utc_str(status['outage_since_utc'])} unterbrochen: {status['last_error_message']}"
             _create_or_update_issue(hass, entry, msg)
             _status_update_queue_len()
             _notify_status_updated(hass, entry.entry_id)
@@ -423,7 +429,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 if not status.get("outage_since_utc"):
                     status["outage_since_utc"] = now_iso
 
-                since_str = _since_local_str(status["outage_since_utc"])
+                since_str = _since_utc_str(status["outage_since_utc"])
                 issue_msg = f"Übertragung zum Service seit {since_str} unterbrochen: {status['last_error_message']}"
                 _create_or_update_issue(hass, entry, issue_msg)
 
@@ -495,7 +501,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         async def handle_send_now(call: ServiceCall) -> None:
             targets = await _iter_target_entries(call)
-            now = dt_util.utcnow()
+            now = dt_util.utcnow().replace(tzinfo=dt_util.UTC)
             for ce in targets:
                 ed = _ensure_entry_data(hass, ce.entry_id)
                 func = ed.get("send_func")
