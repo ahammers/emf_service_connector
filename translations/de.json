@@ -14,6 +14,11 @@
           "finish": "Fertigstellen",
           "advanced": "Erweitert (optional)"
         }
+      },
+      "data": {
+        "api_key": "API-Schlüssel",
+        "site_fid": "Anlagennummer",
+        "em_power_grid_entity": "Netzbezug-Entität"
       }
     }
   },
