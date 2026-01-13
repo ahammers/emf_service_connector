@@ -13,8 +13,8 @@ CONF_EM_POWER_GRID_ENTITY = "em_power_grid_entity"
 CONF_QUEUE_MAX_LEN = "queue_max_len"
 CONF_QUEUE_MAX_SEND_PER_TICK = "queue_max_send_per_tick"
 
-DEFAULT_BASE_URL = "http://ems001.amberquest.at:8444"
-SUBMIT_PATH = "/api/submit_energy_data"
+#DEFAULT_BASE_URL = "http://ems001.amberquest.at:8444/api/submit_energy_data"
+DEFAULT_BASE_URL = "https://emf.hammerschmidt.at/api/v1/submit_energy_data"
 
 SEND_EVERY_MINUTES = 5
 
