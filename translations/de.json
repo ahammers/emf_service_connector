@@ -22,6 +22,29 @@
       }
     }
   },
+  "options": {
+    "step": {
+      "user": {
+        "title": "EMF Service Connector",
+        "description": "Zuordnung der Home-Assistant-Entitäten zu den EMF-API-Feldern."
+      },
+      "advanced": {
+        "title": "Erweiterte Felder (optional)"
+      },
+      "menu": {
+        "title": "Weiter",
+        "menu": {
+          "finish": "Fertigstellen",
+          "advanced": "Erweitert (optional)"
+        }
+      },
+      "data": {
+        "api_key": "API-Schlüssel",
+        "site_fid": "Anlagennummer",
+        "em_power_grid_entity": "Netzbezug-Entität"
+      }
+    }
+  },
   "issues": {
     "send_failed": {
       "title": "Übertragung fehlgeschlagen",
