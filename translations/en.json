@@ -10,7 +10,7 @@
       },
       "menu": {
         "title": "Next",
-        "menu_options": {
+        "menu": {
           "finish": "Finish",
           "advanced": "Advanced (optional)"
         }
