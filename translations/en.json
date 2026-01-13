@@ -15,9 +15,13 @@
       },
       "menu": {
         "title": "Next",
-        "menu": {
+        "menu_options": {
           "finish": "Finish",
           "advanced": "Advanced (optional)"
+        },
+        "menu_option_descriptions": {
+          "finish": "Complete and save the configuration.",
+          "advanced": "Configure advanced fields."
         }
       }
     }
@@ -38,9 +42,13 @@
       },
       "menu": {
         "title": "Next",
-        "menu": {
+        "menu_options": {
           "finish": "Finish",
           "advanced": "Advanced (optional)"
+        },
+        "menu_option_descriptions": {
+          "finish": "Complete and save the configuration.",
+          "advanced": "Configure advanced fields."
         }
       }
     }

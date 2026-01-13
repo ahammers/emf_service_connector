@@ -15,9 +15,13 @@
       },
       "menu": {
         "title": "Weiter",
-        "menu": {
+        "menu_options": {
           "finish": "Fertigstellen",
           "advanced": "Erweitert (optional)"
+        },
+        "menu_option_descriptions": {
+          "finish": "Beenden und die Konfiguration speichern.",
+          "advanced": "Erweiterte Felder konfigurieren."
         }
       }
     }
@@ -38,9 +42,13 @@
       },
       "menu": {
         "title": "Weiter",
-        "menu": {
+        "menu_options": {
           "finish": "Fertigstellen",
           "advanced": "Erweitert (optional)"
+        },
+        "menu_option_descriptions": {
+          "finish": "Beenden und die Konfiguration speichern.",
+          "advanced": "Erweiterte Felder konfigurieren."
         }
       }
     }
