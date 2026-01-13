@@ -5,7 +5,7 @@ from typing import Any
 
 from aiohttp import ClientSession, ClientTimeout
 
-from .const import SUBMIT_PATH
+from .const import DEFAULT_BASE_URL
 
 
 @dataclass(frozen=True)
