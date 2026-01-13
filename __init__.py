@@ -68,7 +68,7 @@ def _format_ts_local(dt: datetime) -> str:
 
 def _format_ts_utc(dt: datetime) -> str:
     utc_dt = dt_util.as_utc(dt)
-    return utc_dt.strftime("%Y-%m-%dT%H:%M:%S")
+    return utc_dt.strftime("%Y-%m-%d %H:%M:%S")
 
 def _state_obj(hass: HomeAssistant, entity_id: str | None):
     if not entity_id:
@@ -260,13 +260,6 @@ def _since_local_str(outage_since_utc: str) -> str:
     local = dt_util.as_local(dt)
     return local.strftime("%H:%M am %d.%m.%Y")
 
-def _since_utc_str(outage_since_utc: str) -> str:
-    dt = dt_util.parse_datetime(outage_since_utc)
-    if dt is None:
-        return outage_since_utc
-    utc_formatted = dt_util.as_utc(dt).strftime("%H:%M UTC %d.%m.%Y")
-    return utc_formatted
-
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     hass.data.setdefault(DOMAIN, {})
     return True
@@ -359,7 +352,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             status["last_error_message"] = "Missing api_key/site_fid"
             if not status.get("outage_since_utc"):
                 status["outage_since_utc"] = now_iso
-            msg = f"Übertragung zum Service seit {_since_utc_str(status['outage_since_utc'])} unterbrochen: {status['last_error_message']}"
+            msg = f"Übertragung zum Service seit {_since_local_str(status['outage_since_utc'])} unterbrochen: {status['last_error_message']}"
             _create_or_update_issue(hass, entry, msg)
             _status_update_queue_len()
             _notify_status_updated(hass, entry.entry_id)
@@ -429,7 +422,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 if not status.get("outage_since_utc"):
                     status["outage_since_utc"] = now_iso
 
-                since_str = _since_utc_str(status["outage_since_utc"])
+                since_str = _since_local_str(status["outage_since_utc"])
                 issue_msg = f"Übertragung zum Service seit {since_str} unterbrochen: {status['last_error_message']}"
                 _create_or_update_issue(hass, entry, issue_msg)
 
