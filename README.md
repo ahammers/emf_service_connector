@@ -165,8 +165,8 @@ Reparatur-Eintrag erstellt.
 
 Du kannst mehrere Instanzen anlegen, z. B.:
 
-EMF Service Connection to SITE_A
-EMF Service Connection to SITE_B
+- EMF Service Connection to SITE_A
+- EMF Service Connection to SITE_B
 
 Jede Instanz:
 - hat eigene Queue
