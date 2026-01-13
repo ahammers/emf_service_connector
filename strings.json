@@ -8,6 +8,11 @@
           "api_key": "API-Schlüssel",
           "site_fid": "Anlagennummer",
           "em_power_grid_entity": "Netzbezug-Entität"
+        },
+        "data_descriptions": {
+          "api_key": "API-Schlüssel für den EMF-Service (erhältlich im EMF-Benutzerportal)",
+          "site_fid": "Eindeutige ID der Anlage (im EMF-Benutzerportal unter Anlagendetails zu finden)",
+          "em_power_grid_entity": "Die SmartMeter-Entität, die den Netzbezug misst. Positiver Wert = Bezug vom Netz."
         }
       },
       "advanced": {
@@ -35,6 +40,11 @@
           "api_key": "API-Schlüssel",
           "site_fid": "Anlagennummer",
           "em_power_grid_entity": "Netzbezug-Entität"
+        },
+        "data_descriptions": {
+          "api_key": "API-Schlüssel für den EMF-Service (erhältlich im EMF-Benutzerportal)",
+          "site_fid": "Eindeutige ID der Anlage (im EMF-Benutzerportal unter Anlagendetails zu finden)",
+          "em_power_grid_entity": "Die SmartMeter-Entität, die den Netzbezug misst. Positiver Wert = Bezug vom Netz."
         }
       },
       "advanced": {

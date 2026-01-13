@@ -8,6 +8,11 @@
           "api_key": "API key",
           "site_fid": "Site ID",
           "em_power_grid_entity": "EM Power Grid Entity"
+        },
+        "data_descriptions": {
+          "api_key": "API key for the EMF service (available in the EMF user portal)",
+          "site_fid": "Unique ID of the site (findable in the EMF user portal under site details)",
+          "em_power_grid_entity": "The SmartMeter entity measuring grid consumption. Positive value = consumption from the grid."
         }
       },
       "advanced": {
@@ -35,6 +40,11 @@
           "api_key": "API key",
           "site_fid": "Site ID",
           "em_power_grid_entity": "EM Power Grid Entity"
+        },
+        "data_descriptions": {
+          "api_key": "API key for the EMF service (available in the EMF user portal)",
+          "site_fid": "Unique ID of the site (findable in the EMF user portal under site details)",
+          "em_power_grid_entity": "The SmartMeter entity measuring grid consumption. Positive value = consumption from the grid."
         }
       },
       "advanced": {
