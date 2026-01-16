@@ -48,9 +48,6 @@ _LOGGER = logging.getLogger(__name__)
 
 _STORE_VERSION = 1
 
-import pkg_resources
-version = pkg_resources.get_distribution(DOMAIN).version
-
 
 def _mask_secret(s: str | None) -> str | None:
     if not s:
@@ -295,7 +292,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         item: dict[str, Any] = {"em_power_grid": grid_val}
         item["datapoint_ts"] = _format_ts_utc(now)
-        item["submit_cli"] = f"emf_{version}"
+        item["submit_cli"] = f"emf_0.1"
 
         for conf_key, api_field in ADV_FIELDS:
             ent = cfg.get(conf_key)
