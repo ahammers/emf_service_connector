@@ -17,6 +17,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 from homeassistant.helpers import issue_registry as ir
 
+
 from .api import EmfApi
 from .const import (
     DOMAIN,
@@ -46,6 +47,9 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 _STORE_VERSION = 1
+
+import pkg_resources
+version = pkg_resources.get_distribution(DOMAIN).version
 
 
 def _mask_secret(s: str | None) -> str | None:
@@ -291,6 +295,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         item: dict[str, Any] = {"em_power_grid": grid_val}
         item["datapoint_ts"] = _format_ts_utc(now)
+        item["submit_cli"] = f"emf_{version}"
 
         for conf_key, api_field in ADV_FIELDS:
             ent = cfg.get(conf_key)
